@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חידושי - בית מדרש דיגיטלי אישי ושיתופי</title>
+    <meta name="description" content="אפליקציה מתקדמת לפרסום, שיתוף ולימוד של חידושי תורה, סוגיות בגמרא וביאורי הלכה עם כלים תורניים מתקדמים.">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-theme="light">
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-container">
+                <i class="fa-solid fa-scroll logo-icon"></i>
+                <h1 class="logo-title">חידושי</h1>
+            </div>
+            
+            <nav class="app-nav">
+                <button class="nav-link active" data-target="study-hall-view">
+                    <i class="fa-solid fa-book-open"></i> בית המדרש
+                </button>
+                <button class="nav-link" data-target="index-view">
+                    <i class="fa-solid fa-list-ol"></i> מפתח הפירושים
+                </button>
+                <button class="nav-link" data-target="scribe-desk-view">
+                    <i class="fa-solid fa-feather-pointed"></i> השולחן שלי
+                </button>
+                <button class="nav-link" data-target="word-repetition-view">
+                    <i class="fa-solid fa-arrows-rotate"></i> חזרת מילים
+                </button>
+                <button class="nav-link" data-target="gematria-view">
+                    <i class="fa-solid fa-calculator"></i> מחשבון גימטריה
+                </button>
+                <button class="nav-link" data-target="library-view">
+                    <i class="fa-solid fa-bookmark"></i> הספרייה שלי
+                </button>
+                <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none;">
+                    <i class="fa-solid fa-clipboard-check"></i> ניהול בקשות <span class="badge" id="pending-requests-badge" style="display: none; background: #e53e3e; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-right: 0.25rem;">0</span>
+                </button>
+            </nav>
+            
+            <div class="header-actions">
+                <div class="role-switcher" style="margin-left: 1rem;">
+                    <select id="role-selector" class="role-select" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.4rem 0.8rem; border-radius: var(--border-radius-sm); font-family: var(--font-sans); cursor: pointer; outline: none; font-weight: 600;">
+                        <option value="user">משתמש רגיל</option>
+                        <option value="admin">מנהל מערכת</option>
+                    </select>
+                </div>
+                <button class="theme-toggle-btn" id="theme-toggle" title="מצב לימוד לילה">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- VIEW 1: STUDY HALL (FEED) -->
+            <section id="study-hall-view" class="page-view active">
+                <div class="study-hall-header">
+                    <h2>היכל החידושים של בית המדרש</h2>
+                    <p>עיין בפנינים, חידושים והארות שנכתבו על התורה, הגמרא וההלכה</p>
+                </div>
+
+                <div class="search-filter-bar">
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="search-input" class="search-input" placeholder="חפש לפי נושא, פסוק, מחבר או קטגוריה...">
+                    </div>
+                    
+                    <div class="category-tabs" id="category-tabs">
+                        <button class="category-tab active" data-category="all">הכל</button>
+                        <button class="category-tab" data-category="תורה">תורה</button>
+                        <button class="category-tab" data-category="נך">נ"ך</button>
+                        <button class="category-tab" data-category="גמרא">גמרא</button>
+                        <button class="category-tab" data-category="הלכה">הלכה</button>
+                        <button class="category-tab" data-category="חסידות ומחשבה">חסידות ומחשבה</button>
+                    </div>
+
+                    <select id="sort-select" class="sort-select">
+                        <option value="newest">הכי חדש</option>
+                        <option value="popular">הכי פופולרי (יישר כוח)</option>
+                        <option value="length">ארוך במיוחד</option>
+                    </select>
+                </div>
+
+                <div class="insights-grid" id="insights-grid">
+                    <!-- Cards will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <!-- VIEW 2: INSIGHT READER -->
+            <section id="insight-reader-view" class="page-view">
+                <button class="back-to-hall-btn" id="back-to-hall">
+                    <i class="fa-solid fa-arrow-right"></i> חזרה לבית המדרש
+                </button>
+                
+                <div class="reader-container">
+                    
+                    <div class="reader-main">
+                        <div class="reader-header">
+                            <span class="card-category" id="reader-category">תורה</span>
+                            <h2 class="logo-title" style="font-size: 2.2rem; margin-top: 0.5rem;" id="reader-title">כותרת החידוש</h2>
+                            <div class="reader-meta">
+                                <div>
+                                    נכתב ע"י: <span class="card-author" id="reader-author">משה רבנו</span> | 
+                                    פרשת: <span id="reader-parasha">-</span>
+                                </div>
+                                <div class="reader-controls">
+                                    <button class="font-size-btn" id="font-decrease" title="הקטן גופן"><i class="fa-solid fa-minus"></i></button>
+                                    <span style="font-size: 0.9rem; font-weight: bold;">גופן</span>
+                                    <button class="font-size-btn" id="font-increase" title="הגדל גופן"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Admin Actions Bar -->
+                        <div class="admin-actions-bar admin-only" style="display: none; margin: 1rem 0; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                            <button class="secondary-btn admin-edit-btn" id="reader-admin-edit" style="padding: 0.5rem 1rem; font-size: 0.9rem;"><i class="fa-solid fa-pen-to-square"></i> עריכה מתקדמת</button>
+                            <button class="secondary-btn admin-split-btn" id="reader-admin-split" style="padding: 0.5rem 1rem; font-size: 0.9rem;"><i class="fa-solid fa-arrows-split-up-and-left"></i> פיצול פירוש</button>
+                            <button class="primary-btn admin-delete-btn" id="reader-admin-delete" style="background-color: #e53e3e; color: white; border: none; padding: 0.5rem 1rem; font-size: 0.9rem;"><i class="fa-solid fa-trash"></i> מחיקה</button>
+                        </div>
+
+                        <!-- Central Scripture Block -->
+                        <div class="biblical-verse-block" id="reader-verse-block">
+                            <div class="biblical-verse-text" id="reader-verse-text">טקסט הפסוק המקורי</div>
+                            <div class="biblical-verse-source" id="reader-verse-source">ספר דברים פרק ג פסוק כג</div>
+                        </div>
+
+
+
+                        <!-- Gematria Connections Box -->
+                        <div class="gematria-box" id="reader-gematria-box">
+                            <div class="gematria-header">
+                                <div class="gematria-connections-title"><i class="fa-solid fa-circle-nodes"></i> קשרים גימטריים מעניינים</div>
+                                <span class="gematria-badge" id="reader-gematria-val">515</span>
+                            </div>
+                            <div class="gematria-conn-explain" id="reader-gematria-explain" style="margin-bottom: 1rem; font-style: italic;">
+                                הסבר הגימטריה הכללי...
+                            </div>
+                            <ul class="gematria-connections-list" id="reader-gematria-list">
+                                <!-- Gematria matched verses here -->
+                            </ul>
+                        </div>
+
+                        <!-- General Insight Content -->
+                        <div class="general-insights-section" id="reader-general-section">
+                            <h4><i class="fa-solid fa-pen-nib"></i> הרחבות והארות נוספות</h4>
+                            <div id="reader-general-text">ההרחבות ייטענו כאן...</div>
+                        </div>
+
+                        <div class="upvote-action-bar">
+                            <button class="upvote-big-btn" id="reader-upvote-btn">
+                                <i class="fa-solid fa-hands-clapping"></i> יישר כוח! (<span id="reader-upvotes-count">0</span>)
+                            </button>
+                            <button class="secondary-btn" id="reader-bookmark-btn">
+                                <i class="fa-regular fa-bookmark"></i> שמור בספרייה שלי
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Havruta Discussion Sidebar -->
+                    <div class="havruta-sidebar">
+                        <div class="havruta-header">
+                            <i class="fa-solid fa-comments" style="color: var(--accent-gold);"></i>
+                            <h3>שיח חברותא</h3>
+                        </div>
+                        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">הוסף הערה או הארה לחידוש זה כחלק מהלימוד המשותף:</p>
+                        
+                        <div class="comment-input-area">
+                            <input type="text" id="comment-name" class="comment-input-name" placeholder="שמך (למשל: תלמיד חכם)">
+                            <textarea id="comment-text" class="comment-input-text" placeholder="כתוב את ההערה שלך כאן..."></textarea>
+                            <button class="submit-comment-btn" id="submit-comment">שלח לשיח</button>
+                        </div>
+
+                        <div class="comments-feed" id="comments-feed">
+                            <!-- Comments bubble will render here -->
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- VIEW 3: SCRIBE DESK (EDITOR) -->
+            <section id="scribe-desk-view" class="page-view">
+                <div class="editor-container">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">שולחן הכתיבה של הסופר</h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">העלה על הכתב חידוש תורה משלך, עצב אותו ופרסם אותו בבית המדרש</p>
+                    
+                    <div class="editor-grid">
+                        <div class="editor-form-group">
+                            <label for="edit-title">כותרת החידוש</label>
+                            <input type="text" id="edit-title" class="editor-input" placeholder="למשל: כוחה של תפילה בפרשת ואתחנן">
+                        </div>
+                        
+                        <div class="editor-form-group">
+                            <label for="edit-category">קטגוריה</label>
+                            <select id="edit-category" class="editor-select">
+                                <option value="תורה">תורה</option>
+                                <option value="נך">נ"ך</option>
+                                <option value="גמרא">גמרא</option>
+                                <option value="הלכה">הלכה</option>
+                                <option value="חסידות ומחשבה">חסידות ומחשבה</option>
+                            </select>
+                        </div>
+
+                        <div class="editor-form-group">
+                            <label for="edit-verse">פסוק או מקור מצוטט</label>
+                            <input type="text" id="edit-verse" class="editor-input" placeholder="למשל: דברים ג, כג">
+                            <span id="editor-verse-vocalized" style="font-size: 0.9rem; color: var(--accent-gold); font-family: var(--font-serif); margin-top: 0.25rem; font-weight: bold; min-height: 1.25rem; display: block;"></span>
+                        </div>
+
+                        <div class="editor-form-group">
+                            <label for="edit-author">שם המחבר</label>
+                            <input type="text" id="edit-author" class="editor-input" placeholder="שמך או כינוי">
+                        </div>
+
+                        <div class="editor-form-group full-width">
+                            <label for="edit-content">תוכן החידוש והביאור</label>
+                            <textarea id="edit-content" class="editor-textarea" placeholder="כתוב כאן בהרחבה את מהלך החידוש שלך, ביאורים, מדרשים, או פנינים רוחניות..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="editor-actions">
+                        <button class="secondary-btn" id="preview-btn"><i class="fa-solid fa-book-open-reader"></i> תצוגה מקדימה בספר</button>
+                        <button class="primary-btn" id="publish-btn"><i class="fa-solid fa-feather"></i> פרסם בהיכל</button>
+                    </div>
+
+                    <!-- Book Layout Preview Panel -->
+                    <div class="editor-preview-panel" id="preview-panel">
+                        <div class="preview-book-title" id="preview-book-title">כותרת הספר</div>
+                        <div class="preview-book-meta">נכתב ע"י <span id="preview-book-author">מחבר</span> | קטגוריה: <span id="preview-book-category">תורה</span></div>
+                        <div class="preview-book-content" id="preview-book-content">תוכן החידוש יראה כאן כמו דף ספר תורני קלאסי...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 4: GEMATRIA CALCULATOR -->
+            <section id="gematria-view" class="page-view">
+                <div class="gematria-calc-container">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">מחשבון גימטריה תורני</h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">חשב את הערך הגימטרי של מילה או פסוק, ומצא מיידית חיבורים מקבילים מתוך דפי הלימוד</p>
+
+                    <div class="calc-input-wrapper">
+                        <input type="text" id="calc-input" class="calc-input" placeholder="הקלד מילה, משפט או פסוק בעברית (למשל: ואתחנן)...">
+                    </div>
+
+                    <div class="calc-result-box" id="calc-result-box" style="display: none;">
+                        <span class="calc-result-number" id="calc-result-num">0</span>
+                        <span class="calc-result-hebrew" id="calc-result-heb"></span>
+                    </div>
+
+                    <div class="calc-matches-section" id="calc-matches-section" style="display: none;">
+                        <h3><i class="fa-solid fa-link"></i> חיבורים ומקבילות בגימטריה זו</h3>
+                        <div class="insights-grid" id="calc-matches-grid">
+                            <!-- Matched cards will render here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 7: COMMENTARY INDEX -->
+            <section id="index-view" class="page-view">
+                <div class="gematria-calc-container" style="max-width: 1100px;">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">מפתח הפירושים והחידושים</h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">עיין ברשימת הספרים והפרקים, וראה כמה פירושים וחידושים נכתבו על כל אחד מהם</p>
+                    
+                    <div class="index-categories-container">
+                        <div class="index-category-column">
+                            <h3 class="index-category-title"><i class="fa-solid fa-scroll"></i> תורה (חומש)</h3>
+                            <div class="index-category-books" id="index-category-torah"></div>
+                        </div>
+                        <div class="index-category-column">
+                            <h3 class="index-category-title"><i class="fa-solid fa-feather"></i> נביאים</h3>
+                            <div class="index-category-books" id="index-category-neviim"></div>
+                        </div>
+                        <div class="index-category-column">
+                            <h3 class="index-category-title"><i class="fa-solid fa-book"></i> כתובים</h3>
+                            <div class="index-category-books" id="index-category-ketuvim"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 5: WORD REPETITION (CONCORDANCE) -->
+            <section id="word-repetition-view" class="page-view">
+                <div class="gematria-calc-container">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">איתור חזרת מילים</h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">הקלד מילה או רצף אותיות כדי לאתר מיידית את כל הפסוקים במאגר המכילים אותם במדויק (ללא ניקוד)</p>
+
+                    <div class="calc-input-wrapper">
+                        <input type="text" id="word-search-input" class="calc-input" placeholder="הקלד מילה לחיפוש (למשל: משה, שמע, אהב)...">
+                    </div>
+
+                    <div class="calc-matches-section" id="word-matches-section" style="display: none;">
+                        <h3><i class="fa-solid fa-list-ol"></i> פסוקים שנמצאו בהם חזרות (<span id="word-matches-count">0</span>)</h3>
+                        <div class="insights-grid" id="word-matches-grid">
+                            <!-- Matched cards will render here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 6: MY LIBRARY (BOOKMARKS & UPLOADER) -->
+            <section id="library-view" class="page-view">
+                <div class="library-container">
+                    
+                    <!-- Sidebar: stats and streaks -->
+                    <div class="streak-sidebar">
+                        <div class="streak-card">
+                            <div class="streak-fire"><i class="fa-solid fa-fire"></i></div>
+                            <div class="streak-number" id="streak-num">3</div>
+                            <div class="streak-label">ימי התמדה רצופים!</div>
+                            <p class="streak-desc">"כל הקובע עת לתורה..." המשך ללמוד ולכתוב חידושים מדי יום כדי להגדיל את מדד ההתמדה שלך.</p>
+                        </div>
+
+                        <div class="diligence-stats-card">
+                            <h3 class="logo-title" style="font-size: 1.25rem; margin-bottom: 1rem;"><i class="fa-solid fa-chart-line"></i> מדדי התמדה</h3>
+                            <div class="stat-row">
+                                <span class="stat-row-label">חידושים שפרסמת:</span>
+                                <span class="stat-row-val" id="stats-published">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row-label">סימניות שמורות:</span>
+                                <span class="stat-row-val" id="stats-bookmarked">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row-label">יישר כוח שקיבלת:</span>
+                                <span class="stat-row-val" id="stats-upvotes">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row-label">הערות שכתבת:</span>
+                                <span class="stat-row-val" id="stats-comments">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Library Section -->
+                    <div class="library-main">
+                        <!-- File Upload Box -->
+                        <div class="file-upload-zone" id="file-upload-zone">
+                            <div class="upload-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+                            <h3 class="upload-title">העלאת דפי לימוד וחידושים</h3>
+                            <p class="upload-desc">גרור ושחרר קובצי טקסט (.txt) או לחץ לבחירת קובץ מהמחשב.</p>
+                            <p class="upload-desc" style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--accent-gold);">האפליקציה תפענח את הקובץ ותטעין אותו לבית המדרש האישי שלך!</p>
+                            <input type="file" id="file-input" style="display: none;" accept=".txt">
+                        </div>
+
+                        <div class="library-tabs">
+                            <button class="library-tab-btn active" data-lib="bookmarks">שמורים ללימוד (<span id="lib-bookmarks-count">0</span>)</button>
+                            <button class="library-tab-btn" data-lib="my-insights">החידושים שלי (<span id="lib-my-count">0</span>)</button>
+                            <button class="library-tab-btn user-only" data-lib="pending-requests" id="lib-pending-tab">הצעות פרסום שלי (<span id="lib-pending-count">0</span>)</button>
+                        </div>
+
+                        <div class="library-list" id="library-list">
+                            <!-- Items will be dynamically inserted here -->
+                            <div class="empty-state">
+                                <div class="empty-state-icon"><i class="fa-solid fa-book-bookmark"></i></div>
+                                <p>אין כרגע פריטים בספרייה זו.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- VIEW 7: ADMIN REQUESTS PANEL -->
+            <section id="admin-requests-view" class="page-view">
+                <div class="editor-container" style="max-width: 900px;">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-check"></i> ניהול בקשות פרסום</h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">בקשות שהוגשו על ידי לומדי המערכת לאישור ופרסום</p>
+                    
+                    <div id="admin-requests-list" class="admin-requests-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        <!-- Pending requests will render here dynamically -->
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Advanced Edit Modal -->
+    <div id="advanced-edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <h3 class="logo-title" style="font-size: 1.6rem; color: var(--accent-gold); margin: 0;"><i class="fa-solid fa-pen-to-square"></i> עריכת פירוש מתקדמת</h3>
+                <button class="modal-close-btn" id="edit-modal-close" style="background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="advanced-edit-form">
+                <input type="hidden" id="adv-edit-id">
+                <div class="editor-grid">
+                    <div class="editor-form-group">
+                        <label for="adv-edit-title">כותרת / פסוק</label>
+                        <input type="text" id="adv-edit-title" class="editor-input" required>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="adv-edit-category">קטגוריה</label>
+                        <select id="adv-edit-category" class="editor-select">
+                            <option value="תורה">תורה</option>
+                            <option value="נביאים">נביאים</option>
+                            <option value="כתובים">כתובים</option>
+                            <option value="נך">נ"ך</option>
+                            <option value="גמרא">גמרא</option>
+                            <option value="הלכה">הלכה</option>
+                            <option value="חסידות ומחשבה">חסידות ומחשבה</option>
+                        </select>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="adv-edit-parasha">פרשה / ספר</label>
+                        <input type="text" id="adv-edit-parasha" class="editor-input">
+                    </div>
+                    <div class="editor-form-group" style="display: flex; gap: 0.5rem;">
+                        <div style="flex: 1;">
+                            <label for="adv-edit-chapter">פרק</label>
+                            <input type="number" id="adv-edit-chapter" class="editor-input" min="1">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="adv-edit-verseNum">פסוק (אות)</label>
+                            <input type="text" id="adv-edit-verseNum" class="editor-input" placeholder="למשל: כג">
+                        </div>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="adv-edit-author">מחבר</label>
+                        <input type="text" id="adv-edit-author" class="editor-input">
+                    </div>
+                    <div class="editor-form-group">
+                        <!-- Spacer to align grid -->
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <h4 style="margin: 1rem 0 0.5rem 0; font-family: var(--font-serif); border-bottom: 2px solid var(--border-gold); padding-bottom: 0.25rem; color: var(--text-secondary);">פירושי פרד"ס</h4>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <label for="adv-edit-peshat">פשט</label>
+                        <textarea id="adv-edit-peshat" class="editor-textarea" style="height: 100px;"></textarea>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <label for="adv-edit-remez">רמז</label>
+                        <textarea id="adv-edit-remez" class="editor-textarea" style="height: 100px;"></textarea>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <label for="adv-edit-derash">דרש</label>
+                        <textarea id="adv-edit-derash" class="editor-textarea" style="height: 100px;"></textarea>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <label for="adv-edit-sod">סוד</label>
+                        <textarea id="adv-edit-sod" class="editor-textarea" style="height: 100px;"></textarea>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <h4 style="margin: 1rem 0 0.5rem 0; font-family: var(--font-serif); border-bottom: 2px solid var(--border-gold); padding-bottom: 0.25rem; color: var(--text-secondary);">גימטריה וחיבורים</h4>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="adv-edit-gem-val">ערך גימטריה</label>
+                        <input type="number" id="adv-edit-gem-val" class="editor-input">
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <label for="adv-edit-gem-explain">ביאור גימטריה כללי</label>
+                        <textarea id="adv-edit-gem-explain" class="editor-textarea" style="height: 80px;"></textarea>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <label for="adv-edit-gem-conns">קשרים גימטריים נוספים (JSON)</label>
+                        <textarea id="adv-edit-gem-conns" class="editor-textarea" style="height: 120px; font-family: monospace;" placeholder='[{"verseText": "פסוק מקביל", "source": "תהילים קיט, א", "explanation": "הסבר..."}]'></textarea>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <h4 style="margin: 1rem 0 0.5rem 0; font-family: var(--font-serif); border-bottom: 2px solid var(--border-gold); padding-bottom: 0.25rem; color: var(--text-secondary);">תובנות כלליות / סיכום</h4>
+                    </div>
+                    <div class="editor-form-group full-width">
+                        <label for="adv-edit-general">ביאור כללי / מאמר</label>
+                        <textarea id="adv-edit-general" class="editor-textarea" style="height: 120px;"></textarea>
+                    </div>
+                </div>
+                <div class="editor-actions" style="margin-top: 2rem;">
+                    <button type="button" class="secondary-btn" id="edit-modal-cancel">בטל</button>
+                    <button type="submit" class="primary-btn"><i class="fa-solid fa-floppy-disk"></i> שמור שינויים</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Split Commentary Modal -->
+    <div id="split-commentary-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <h3 class="logo-title" style="font-size: 1.6rem; color: var(--accent-gold); margin: 0;"><i class="fa-solid fa-arrows-split-up-and-left"></i> פיצול פירוש</h3>
+                <button class="modal-close-btn" id="split-modal-close" style="background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="split-desc" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; text-align: center;">
+                תוכל לפצל פירוש קיים לשני פירושים עצמאיים. העבר או ערוך את תכני הפירושים בכל צד, והגדר את מראה המקום החדש עבור החלק המפוצל.
+            </div>
+            
+            <div class="split-pane-layout" style="display: flex; gap: 2rem;">
+                <!-- Left Pane: Original commentary (reduced) -->
+                <div class="split-pane" style="flex: 1; display: flex; flex-direction: column; gap: 1rem; border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--border-radius-sm); background: rgba(var(--accent-gold-rgb), 0.02);">
+                    <h4 style="font-family: var(--font-serif); border-bottom: 2px solid var(--border-gold); padding-bottom: 0.25rem; color: var(--text-secondary);"><i class="fa-solid fa-align-left"></i> הפירוש המקורי (נשאר)</h4>
+                    <input type="hidden" id="split-orig-id">
+                    <div style="font-size: 0.9rem; font-weight: bold;" id="split-orig-coord-label">מפתח מקורי</div>
+                    <div class="editor-form-group">
+                        <label for="split-orig-text">טקסט הפסוק/מקור</label>
+                        <input type="text" id="split-orig-text" class="editor-input">
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-orig-peshat">פשט</label>
+                        <textarea id="split-orig-peshat" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-orig-remez">רמז</label>
+                        <textarea id="split-orig-remez" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-orig-derash">דרש</label>
+                        <textarea id="split-orig-derash" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-orig-sod">סוד</label>
+                        <textarea id="split-orig-sod" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-orig-general">תוכן כללי</label>
+                        <textarea id="split-orig-general" class="editor-textarea" style="height: 100px;"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Center Transfer Controls -->
+                <div class="split-transfer-controls" style="display: flex; flex-direction: column; justify-content: center; gap: 1rem; align-items: center; width: 40px;">
+                    <button type="button" class="font-size-btn" id="split-move-all-right" title="העבר הכל שמאלה" style="width: 40px; height: 40px; border-radius: 50%;"><i class="fa-solid fa-angles-left"></i></button>
+                    <button type="button" class="font-size-btn" id="split-move-general-right" title="העבר תוכן כללי" style="width: 40px; height: 40px; border-radius: 50%;"><i class="fa-solid fa-angle-left"></i></button>
+                </div>
+
+                <!-- Right Pane: New commentary (split off) -->
+                <div class="split-pane" style="flex: 1; display: flex; flex-direction: column; gap: 1rem; border: 1px solid var(--border-gold); padding: 1.5rem; border-radius: var(--border-radius-sm); background: rgba(var(--accent-gold-rgb), 0.05);">
+                    <h4 style="font-family: var(--font-serif); border-bottom: 2px solid var(--border-gold); padding-bottom: 0.25rem; color: var(--text-secondary);"><i class="fa-solid fa-circle-plus"></i> הפירוש המפוצל (חדש)</h4>
+                    
+                    <div class="editor-grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <div class="editor-form-group">
+                            <label for="split-new-book">ספר / מפתח</label>
+                            <input type="text" id="split-new-book" class="editor-input" placeholder="למשל: דברים">
+                        </div>
+                        <div class="editor-grid" style="grid-template-columns: 1fr 1fr; gap: 0.25rem;">
+                            <div class="editor-form-group">
+                                <label for="split-new-chapter">פרק</label>
+                                <input type="number" id="split-new-chapter" class="editor-input" min="1">
+                            </div>
+                            <div class="editor-form-group">
+                                <label for="split-new-verseNum">פסוק</label>
+                                <input type="text" id="split-new-verseNum" class="editor-input" placeholder="כג">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-new-text">טקסט הפסוק/מקור</label>
+                        <input type="text" id="split-new-text" class="editor-input" placeholder="הכנס את טקסט הפסוק החדש">
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-new-peshat">פשט</label>
+                        <textarea id="split-new-peshat" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-new-remez">רמז</label>
+                        <textarea id="split-new-remez" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-new-derash">דרש</label>
+                        <textarea id="split-new-derash" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-new-sod">סוד</label>
+                        <textarea id="split-new-sod" class="editor-textarea" style="height: 70px;"></textarea>
+                    </div>
+                    <div class="editor-form-group">
+                        <label for="split-new-general">תוכן כללי</label>
+                        <textarea id="split-new-general" class="editor-textarea" style="height: 100px;"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="editor-actions" style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <button type="button" class="secondary-btn" id="split-modal-cancel">בטל</button>
+                <button type="button" class="primary-btn" id="split-save-btn"><i class="fa-solid fa-arrows-split-up-and-left"></i> בצע פיצול ושמור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="tanakh_data.js"></script>
+    <script src="data.js"></script>
+    <script src="parser.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
