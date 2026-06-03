@@ -681,6 +681,7 @@ body {
 
 .pardes-section-content p {
     margin-bottom: 0.5rem;
+    white-space: pre-wrap;
 }
 
 .pardes-section-content p:last-child {

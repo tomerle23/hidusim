@@ -4,7 +4,7 @@
  */
 
 function parseTorahText(text) {
-    const lines = text.split('\n').map(line => line.trim());
+    const lines = text.split('\n'); // Preserve leading whitespace
     
     let result = {
         title: "",
@@ -17,7 +17,7 @@ function parseTorahText(text) {
     
     // Detect basic metadata
     for (let i = 0; i < Math.min(12, lines.length); i++) {
-        const line = lines[i];
+        const line = lines[i].trim();
         if (!line) continue;
         if (line.includes("פרשת ואתחנן") || line.includes("פרשת ")) {
             result.title = line;
@@ -34,19 +34,21 @@ function parseTorahText(text) {
     
     let currentVerse = null;
     let currentSection = ""; // "peshat", "remez", "derash", "sod", "gematria", "essay"
+    let currentSubsection = ""; // "peshat_derash_remez", "toda_hashem"
     let currentGematria = null;
     
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if (!line) continue;
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
         
         // Skip metadata header lines at the very beginning
-        if (i < 10 && (line === result.title || line === result.subTitle || line === result.versesRange || line.includes("ימים") || line.includes("התשפ") || line.includes("במרץ"))) {
+        if (i < 10 && (trimmedLine === result.title || trimmedLine === result.subTitle || trimmedLine === result.versesRange || trimmedLine.includes("ימים") || trimmedLine.includes("התשפ") || trimmedLine.includes("במרץ"))) {
             continue;
         }
         
         // Detect new verse section: e.g. "(כג) וָאֶתְחַנַּן..."
-        const verseMatch = line.match(/^\(([\u0590-\u05fe]{1,3})\)\s*(.*)$/);
+        const verseMatch = trimmedLine.match(/^\(([\u0590-\u05fe]{1,3})\)\s*(.*)$/);
         if (verseMatch) {
             if (currentVerse) {
                 result.insights.push(currentVerse);
@@ -67,41 +69,55 @@ function parseTorahText(text) {
                     sod: []
                 },
                 gematria: null,
-                generalInsights: []
+                generalInsights: [],
+                todaHashem: [] // array of {title, content} objects
             };
             currentSection = "";
+            currentSubsection = "";
             continue;
         }
         
+        // Detect subsection switches (first-level bullet points without leading spaces)
+        if (line.startsWith('*') || (line.startsWith(' *') && !line.startsWith('  '))) {
+            const cleanText = trimmedLine.replace(/\*/g, '').trim();
+            if (cleanText.includes("פשט דרש ורמז") || cleanText.includes("פשט") || cleanText.includes("דרש")) {
+                currentSubsection = "peshat_derash_remez";
+                continue;
+            } else if (cleanText.includes("תודה ה'")) {
+                currentSubsection = "toda_hashem";
+                continue;
+            }
+        }
+        
         // Detect section changes
-        const lowerLine = line.toLowerCase();
+        const lowerLine = trimmedLine.toLowerCase();
         if (lowerLine.startsWith("פשט:") || lowerLine.startsWith("פשט דרש ורמז:") || lowerLine === "פשט דרש ורמז") {
             currentSection = "peshat";
-            const content = line.includes(":") ? line.substring(line.indexOf(":") + 1).trim() : "";
+            const content = trimmedLine.includes(":") ? trimmedLine.substring(trimmedLine.indexOf(":") + 1).trim() : "";
             if (content && currentVerse) currentVerse.interpretations.peshat.push(content);
             continue;
         }
         if (lowerLine.startsWith("רמז:")) {
             currentSection = "remez";
-            const content = line.substring(line.indexOf(":") + 1).trim();
+            const content = trimmedLine.substring(trimmedLine.indexOf(":") + 1).trim();
             if (content && currentVerse) currentVerse.interpretations.remez.push(content);
             continue;
         }
         if (lowerLine.startsWith("דרש:")) {
             currentSection = "derash";
-            const content = line.substring(line.indexOf(":") + 1).trim();
+            const content = trimmedLine.substring(trimmedLine.indexOf(":") + 1).trim();
             if (content && currentVerse) currentVerse.interpretations.derash.push(content);
             continue;
         }
         if (lowerLine.startsWith("סוד:")) {
             currentSection = "sod";
-            const content = line.substring(line.indexOf(":") + 1).trim();
+            const content = trimmedLine.substring(trimmedLine.indexOf(":") + 1).trim();
             if (content && currentVerse) currentVerse.interpretations.sod.push(content);
             continue;
         }
         
         // Detect Gematria section: e.g. "גימטריה 1332"
-        const gematriaMatch = line.match(/^גימטריה\s+(\d+)$/);
+        const gematriaMatch = trimmedLine.match(/^גימטריה\s+(\d+)$/);
         if (gematriaMatch) {
             currentSection = "gematria";
             if (currentGematria) {
@@ -117,16 +133,22 @@ function parseTorahText(text) {
         }
         
         // Detect essays/standalone topics: e.g. "ואתחנן כוחה של תפילה - פרשת ואתחנן..."
-        // Matches lines with a separator like ' - ' or ' : ' where the title is concise and content is long.
-        const essayMatch = line.match(/^([^—\-:]{3,45}?)\s*([—\-:]+)\s*(.*)$/);
-        if (essayMatch && !line.startsWith("פשט") && !line.startsWith("רמז") && !line.startsWith("דרש") && !line.startsWith("סוד") && !line.includes("גימטריה") && !line.includes("א=") && !line.includes("ח=") && !line.includes("ד=")) {
+        const essayMatch = trimmedLine.match(/^([^—\-:]{3,45}?)\s*([—\-:]+)\s*(.*)$/);
+        if (essayMatch && !trimmedLine.startsWith("פשט") && !trimmedLine.startsWith("רמז") && !trimmedLine.startsWith("דרש") && !trimmedLine.startsWith("סוד") && !trimmedLine.includes("גימטריה") && !trimmedLine.includes("א=") && !trimmedLine.includes("ח=") && !trimmedLine.includes("ד=")) {
             const title = essayMatch[1].trim();
             const content = essayMatch[3].trim();
             
-            // Validate it's indeed an essay (long content, short title, no parenthesis)
+            // Validate it's indeed an essay
             if (title.length > 2 && content.length > 20 && !title.includes("(") && !title.includes(")") && !title.includes("=")) {
                 if (currentVerse) {
-                    currentVerse.generalInsights.push(`<b>${title}</b> - ${content}`);
+                    if (currentSubsection === "toda_hashem") {
+                        currentVerse.todaHashem.push({
+                            title: `<b>${title}</b>`,
+                            content: [content]
+                        });
+                    } else {
+                        currentVerse.generalInsights.push(`<b>${title}</b> - ${content}`);
+                    }
                 } else {
                     result.essays.push({
                         title: title,
@@ -140,9 +162,7 @@ function parseTorahText(text) {
         
         // Process line content based on active section
         if (currentSection === "gematria" && currentGematria) {
-            // Verse connection: e.g. "וַיְדַבֵּ֣ר אֱלֹהִ֔ים... (שמות כ, א) – הקדמה למעמד הר סיני."
-            // We search for parenthesis containing source, and a separator - or –
-            const connMatch = line.match(/^(.*?)\(([\u0590-\u05fe\s0-9,:\"]+[^)]+)\)\s*[–-]\s*(.*)$/);
+            const connMatch = trimmedLine.match(/^(.*?)\(([\u0590-\u05fe\s0-9,:\"]+[^)]+)\)\s*[–-]\s*(.*)$/);
             if (connMatch) {
                 currentGematria.connections.push({
                     verseText: connMatch[1].trim(),
@@ -150,7 +170,7 @@ function parseTorahText(text) {
                     explanation: connMatch[3].trim()
                 });
             } else {
-                currentGematria.explanation.push(line);
+                currentGematria.explanation.push(line); // Preserve line indentation
             }
             continue;
         }
@@ -174,14 +194,33 @@ function parseTorahText(text) {
         
         // General text under current verse or global
         if (currentVerse) {
-            if (line === "תודה ה'") {
-                currentSection = "";
-                continue;
+            if (currentSubsection === "toda_hashem") {
+                // If it is a second-level bullet point under Toda Hashem
+                if (line.startsWith('  *') && !line.startsWith('   ')) {
+                    const titleText = trimmedLine.replace(/^\*\s*/, '').trim();
+                    currentVerse.todaHashem.push({
+                        title: titleText,
+                        content: []
+                    });
+                } else {
+                    // Append to the last sub-item
+                    if (currentVerse.todaHashem.length > 0) {
+                        currentVerse.todaHashem[currentVerse.todaHashem.length - 1].content.push(line);
+                    } else {
+                        // Fallback if no sub-item was created yet
+                        const titleText = trimmedLine.replace(/^\*\s*/, '').trim();
+                        currentVerse.todaHashem.push({
+                            title: titleText,
+                            content: []
+                        });
+                    }
+                }
+            } else {
+                currentVerse.generalInsights.push(line);
             }
-            currentVerse.generalInsights.push(line);
         } else {
             // Global sheet introduction or general notes
-            if (!line.includes("10/08") && !line.includes("ימים") && !line.includes("התשפ") && !line.includes("במרץ") && line !== "תודה ה'") {
+            if (!trimmedLine.includes("10/08") && !trimmedLine.includes("ימים") && !trimmedLine.includes("התשפ") && !trimmedLine.includes("במרץ") && trimmedLine !== "תודה ה'") {
                 result.essays.push({
                     title: "מבוא ללימוד",
                     content: line,
@@ -212,16 +251,23 @@ function parseTorahText(text) {
         for (let key in insight.interpretations) {
             insight.interpretations[key] = insight.interpretations[key].join('\n').trim();
         }
-        insight.generalInsights = insight.generalInsights.filter(l => l !== "תודה ה'").join('\n').trim();
+        insight.generalInsights = insight.generalInsights.filter(l => l.trim() !== "תודה ה'").join('\n').trim();
+        
+        // Post-process todaHashem array
+        insight.todaHashem.forEach(subItem => {
+            subItem.title = subItem.title.replace(/^\*\s*/, '').trim();
+            subItem.content = subItem.content.filter(l => l.trim() !== "תודה ה'").join('\n').trim();
+        });
+        // Remove empty subItems
+        insight.todaHashem = insight.todaHashem.filter(subItem => subItem.title.length > 0 || subItem.content.length > 0);
+        
         if (insight.gematria) {
-            insight.gematria.explanation = insight.gematria.explanation.filter(l => l !== "תודה ה'").join('\n').trim();
+            insight.gematria.explanation = insight.gematria.explanation.filter(l => l.trim() !== "תודה ה'").join('\n').trim();
         }
     });
     
-    // Join adjacent general essays that have empty titles to make them coherent
     result.essays = result.essays.filter(essay => essay.content.trim().length > 0);
     
-    // Group essays that belong to the same topic if they were split
     return result;
 }
 

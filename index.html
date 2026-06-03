@@ -150,8 +150,14 @@
 
                         <!-- General Insight Content -->
                         <div class="general-insights-section" id="reader-general-section">
-                            <h4><i class="fa-solid fa-pen-nib"></i> הרחבות והארות נוספות</h4>
+                            <h4><i class="fa-solid fa-pen-nib"></i> פשט דרש ורמז</h4>
                             <div id="reader-general-text">ההרחבות ייטענו כאן...</div>
+                        </div>
+
+                        <!-- Toda Hashem Content -->
+                        <div class="general-insights-section" id="reader-toda-section" style="margin-top: 2rem; display: none;">
+                            <h4><i class="fa-solid fa-scroll"></i> תודה ה'</h4>
+                            <div id="reader-toda-text">התובנות ייטענו כאן...</div>
                         </div>
 
                         <div class="upvote-action-bar">
@@ -255,10 +261,17 @@
                         <span class="calc-result-hebrew" id="calc-result-heb"></span>
                     </div>
 
+                    <!-- New Section: Word-by-Word Gematria Analysis -->
+                    <div id="gematria-words-analysis" style="display: none; margin-top: 1.5rem; background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); text-align: right; line-height: 1.8;">
+                        <strong style="color: var(--accent-gold); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><i class="fa-solid fa-calculator"></i> ערך גימטרי לכל מילה (לחץ לחיפוש מקבילות):</strong>
+                        <div id="gematria-words-list" style="font-size: 1.1rem; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;"></div>
+                    </div>
+
                     <div class="calc-matches-section" id="calc-matches-section" style="display: none;">
                         <h3><i class="fa-solid fa-link"></i> חיבורים ומקבילות בגימטריה זו</h3>
-                        <div class="insights-grid" id="calc-matches-grid">
-                            <!-- Matched cards will render here -->
+                        <!-- Simple list style for gematria matches instead of grid cards -->
+                        <div id="calc-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; text-align: right; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.7;">
+                            <!-- Matched items will render here -->
                         </div>
                     </div>
                 </div>
@@ -299,8 +312,38 @@
 
                     <div class="calc-matches-section" id="word-matches-section" style="display: none;">
                         <h3><i class="fa-solid fa-list-ol"></i> פסוקים שנמצאו בהם חזרות (<span id="word-matches-count">0</span>)</h3>
-                        <div class="insights-grid" id="word-matches-grid">
-                            <!-- Matched cards will render here -->
+                        <!-- Simple list style for verses instead of grid cards -->
+                        <div id="word-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; text-align: right; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.7;">
+                            <!-- Matched verses will render here -->
+                        </div>
+                    </div>
+
+                    <!-- New Section: Full Verse Analysis (Words & Pairs) -->
+                    <div class="calc-matches-section" style="margin-top: 3rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+                        <h3><i class="fa-solid fa-chart-pie"></i> ניתוח פסוק שלם (מילים וצמדים)</h3>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;">הקלד או הדבק פסוק שלם כדי לראות את מספר החזרות של כל מילה ושל כל צמד מילים רצופות במאגר התנ"ך</p>
+                        
+                        <div class="calc-input-wrapper">
+                            <textarea id="verse-analysis-input" class="calc-input" style="height: 80px; padding: 0.75rem; font-family: var(--font-serif); font-size: 1.2rem; resize: vertical;" placeholder="הדבק או הקלד פסוק שלם כאן (למשל: ולא תתחתן בם בתך לא תתן לבנו)..."></textarea>
+                        </div>
+                        
+                        <div id="verse-analysis-results" style="display: none; margin-top: 1.5rem; background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); text-align: right; line-height: 1.8;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <strong style="color: var(--accent-gold); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><i class="fa-solid fa-font"></i> מילים בודדות וחזרותיהן (לחץ על מילה לחיפוש):</strong>
+                                <div id="words-analysis-list" style="font-size: 1.1rem; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;"></div>
+                            </div>
+                            <div style="margin-bottom: 1.5rem;">
+                                <strong style="color: var(--accent-gold); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><i class="fa-solid fa-link"></i> צמדי מילים (זוגות) וחזרותיהם (לחץ על צמד לחיפוש):</strong>
+                                <div id="pairs-analysis-list" style="font-size: 1.1rem; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;"></div>
+                            </div>
+                            <div style="margin-bottom: 1.5rem;">
+                                <strong style="color: var(--accent-gold); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><i class="fa-solid fa-lines-leaning"></i> שלשות מילים וחזרותיהן (לחץ על שלשה לחיפוש):</strong>
+                                <div id="triplets-analysis-list" style="font-size: 1.1rem; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;"></div>
+                            </div>
+                            <div>
+                                <strong style="color: var(--accent-gold); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><i class="fa-solid fa-cubes"></i> רביעיות מילים וחזרותיהם (לחץ על רביעייה לחיפוש):</strong>
+                                <div id="quads-analysis-list" style="font-size: 1.1rem; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

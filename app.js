@@ -438,6 +438,202 @@ function loadLocalStorage() {
 function saveLocalStorage(key, data) {
     localStorage.setItem(key, JSON.stringify(data));
     updateStats();
+    saveToServer(key, data);
+}
+
+async function loadFromServer() {
+    try {
+        const response = await fetch('/api/get_data');
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        let hasChanges = false;
+        let needsUpload = false;
+        const uploadPayload = {};
+
+        // 1. Bookmarks
+        const serverBookmarks = data.torah_bookmarks || [];
+        const mergedBookmarks = Array.from(new Set([...State.bookmarks, ...serverBookmarks]));
+        if (JSON.stringify(State.bookmarks) !== JSON.stringify(mergedBookmarks) || JSON.stringify(serverBookmarks) !== JSON.stringify(mergedBookmarks)) {
+            State.bookmarks = mergedBookmarks;
+            localStorage.setItem('torah_bookmarks', JSON.stringify(State.bookmarks));
+            hasChanges = true;
+            if (JSON.stringify(serverBookmarks) !== JSON.stringify(mergedBookmarks)) {
+                uploadPayload['torah_bookmarks'] = mergedBookmarks;
+                needsUpload = true;
+            }
+        }
+
+        // 2. Comments
+        const serverComments = data.torah_comments || {};
+        const mergedComments = { ...serverComments };
+        for (let id in State.comments) {
+            if (!mergedComments[id]) {
+                mergedComments[id] = State.comments[id];
+            } else {
+                const serverCommentStrings = new Set(mergedComments[id].map(c => `${c.name}:${c.text}`));
+                State.comments[id].forEach(c => {
+                    if (!serverCommentStrings.has(`${c.name}:${c.text}`)) {
+                        mergedComments[id].push(c);
+                    }
+                });
+            }
+        }
+        if (JSON.stringify(State.comments) !== JSON.stringify(mergedComments) || JSON.stringify(serverComments) !== JSON.stringify(mergedComments)) {
+            State.comments = mergedComments;
+            localStorage.setItem('torah_comments', JSON.stringify(State.comments));
+            hasChanges = true;
+            if (JSON.stringify(serverComments) !== JSON.stringify(mergedComments)) {
+                uploadPayload['torah_comments'] = mergedComments;
+                needsUpload = true;
+            }
+        }
+
+        // 3. Upvotes
+        const serverUpvotes = data.torah_upvotes || {};
+        const mergedUpvotes = { ...serverUpvotes };
+        for (let id in State.upvotes) {
+            mergedUpvotes[id] = Math.max(State.upvotes[id] || 0, mergedUpvotes[id] || 0);
+        }
+        if (JSON.stringify(State.upvotes) !== JSON.stringify(mergedUpvotes) || JSON.stringify(serverUpvotes) !== JSON.stringify(mergedUpvotes)) {
+            State.upvotes = mergedUpvotes;
+            localStorage.setItem('torah_upvotes', JSON.stringify(State.upvotes));
+            hasChanges = true;
+            if (JSON.stringify(serverUpvotes) !== JSON.stringify(mergedUpvotes)) {
+                uploadPayload['torah_upvotes'] = mergedUpvotes;
+                needsUpload = true;
+            }
+        }
+
+        // 4. User Insights
+        const serverUserInsights = data.torah_user_insights || [];
+        const mergedUserInsights = [...serverUserInsights];
+        const serverUserIds = new Set(serverUserInsights.map(item => item.id));
+        State.userInsights.forEach(item => {
+            if (!serverUserIds.has(item.id)) {
+                mergedUserInsights.push(item);
+            }
+        });
+        if (JSON.stringify(State.userInsights) !== JSON.stringify(mergedUserInsights) || JSON.stringify(serverUserInsights) !== JSON.stringify(mergedUserInsights)) {
+            State.userInsights = mergedUserInsights;
+            localStorage.setItem('torah_user_insights', JSON.stringify(State.userInsights));
+            hasChanges = true;
+            if (JSON.stringify(serverUserInsights) !== JSON.stringify(mergedUserInsights)) {
+                uploadPayload['torah_user_insights'] = mergedUserInsights;
+                needsUpload = true;
+            }
+        }
+
+        // 5. Uploaded Insights
+        const serverUploadedInsights = data.torah_uploaded_insights || [];
+        const mergedUploadedInsights = [...serverUploadedInsights];
+        const serverUploadedIds = new Set(serverUploadedInsights.map(item => item.id));
+        State.uploadedInsights.forEach(item => {
+            if (!serverUploadedIds.has(item.id)) {
+                mergedUploadedInsights.push(item);
+            }
+        });
+        if (JSON.stringify(State.uploadedInsights) !== JSON.stringify(mergedUploadedInsights) || JSON.stringify(serverUploadedInsights) !== JSON.stringify(mergedUploadedInsights)) {
+            State.uploadedInsights = mergedUploadedInsights;
+            localStorage.setItem('torah_uploaded_insights', JSON.stringify(State.uploadedInsights));
+            hasChanges = true;
+            if (JSON.stringify(serverUploadedInsights) !== JSON.stringify(mergedUploadedInsights)) {
+                uploadPayload['torah_uploaded_insights'] = mergedUploadedInsights;
+                needsUpload = true;
+            }
+        }
+
+        // 6. Streak
+        const serverStreak = data.torah_streak ? parseInt(data.torah_streak) : 3;
+        const mergedStreak = Math.max(State.userStreak, serverStreak);
+        if (State.userStreak !== mergedStreak || serverStreak !== mergedStreak) {
+            State.userStreak = mergedStreak;
+            localStorage.setItem('torah_streak', State.userStreak.toString());
+            hasChanges = true;
+            if (serverStreak !== mergedStreak) {
+                uploadPayload['torah_streak'] = mergedStreak;
+                needsUpload = true;
+            }
+        }
+
+        // 7. Pending Requests
+        const serverPending = data.torah_pending_requests || [];
+        const mergedPending = [...serverPending];
+        const serverPendingIds = new Set(serverPending.map(item => item.id));
+        State.pendingRequests.forEach(item => {
+            if (!serverPendingIds.has(item.id)) {
+                mergedPending.push(item);
+            }
+        });
+        if (JSON.stringify(State.pendingRequests) !== JSON.stringify(mergedPending) || JSON.stringify(serverPending) !== JSON.stringify(mergedPending)) {
+            State.pendingRequests = mergedPending;
+            localStorage.setItem('torah_pending_requests', JSON.stringify(State.pendingRequests));
+            hasChanges = true;
+            if (JSON.stringify(serverPending) !== JSON.stringify(mergedPending)) {
+                uploadPayload['torah_pending_requests'] = mergedPending;
+                needsUpload = true;
+            }
+        }
+
+        // 8. Deleted Default IDs
+        const serverDeleted = data.torah_deleted_default_ids || [];
+        const mergedDeleted = Array.from(new Set([...State.deletedDefaultIds, ...serverDeleted]));
+        if (JSON.stringify(State.deletedDefaultIds) !== JSON.stringify(mergedDeleted) || JSON.stringify(serverDeleted) !== JSON.stringify(mergedDeleted)) {
+            State.deletedDefaultIds = mergedDeleted;
+            localStorage.setItem('torah_deleted_default_ids', JSON.stringify(State.deletedDefaultIds));
+            hasChanges = true;
+            if (JSON.stringify(serverDeleted) !== JSON.stringify(mergedDeleted)) {
+                uploadPayload['torah_deleted_default_ids'] = mergedDeleted;
+                needsUpload = true;
+            }
+        }
+
+        // 9. Edited Default Insights
+        const serverEdited = data.torah_edited_default_insights || {};
+        const mergedEdited = { ...serverEdited, ...State.editedDefaultInsights };
+        if (JSON.stringify(State.editedDefaultInsights) !== JSON.stringify(mergedEdited) || JSON.stringify(serverEdited) !== JSON.stringify(mergedEdited)) {
+            State.editedDefaultInsights = mergedEdited;
+            localStorage.setItem('torah_edited_default_insights', JSON.stringify(State.editedDefaultInsights));
+            hasChanges = true;
+            if (JSON.stringify(serverEdited) !== JSON.stringify(mergedEdited)) {
+                uploadPayload['torah_edited_default_insights'] = mergedEdited;
+                needsUpload = true;
+            }
+        }
+        
+        if (hasChanges) {
+            updateStats();
+        }
+
+        if (needsUpload) {
+            console.log("Uploading merged local state to server...", uploadPayload);
+            await fetch('/api/save_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(uploadPayload)
+            });
+        }
+    } catch (err) {
+        console.warn("Failed to load data from server. Working in offline mode:", err);
+    }
+}
+
+async function saveToServer(key, data) {
+    try {
+        const payload = {};
+        payload[key] = data;
+        await fetch('/api/save_data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+    } catch (err) {
+        console.error("Failed to save data to server:", err);
+    }
 }
 
 // --- Navigation Controller ---
@@ -1126,7 +1322,7 @@ function populateInlineCommentaries(insight) {
     if (insight.generalInsights) {
         html += `
             <div class="pardes-section-block general-insight-block">
-                <div class="pardes-section-title">הרחבות והארות נוספות</div>
+                <div class="pardes-section-title">פשט דרש ורמז</div>
                 <div class="pardes-section-content">
                     ${insight.generalInsights.split('\n').map(p => `<p>${p}</p>`).join('')}
                 </div>
@@ -1141,12 +1337,43 @@ function populateInlineCommentaries(insight) {
         genSection.style.display = 'none';
         txtBox.innerHTML = '';
     }
+
+    // Add Toda Hashem section if it exists
+    const todaSection = document.getElementById('reader-toda-section');
+    const todaTxtBox = document.getElementById('reader-toda-text');
+    if (todaSection && todaTxtBox) {
+        if (insight.todaHashem && Array.isArray(insight.todaHashem) && insight.todaHashem.length > 0) {
+            todaSection.style.display = 'block';
+            todaTxtBox.innerHTML = insight.todaHashem.map(subItem => `
+                <div class="pardes-section-block toda-hashem-block" style="border-right-color: var(--accent-gold); margin-bottom: 1rem;">
+                    <div class="pardes-section-title">${subItem.title}</div>
+                    <div class="pardes-section-content">
+                        ${subItem.content.split('\n').map(p => `<p>${p}</p>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        } else if (insight.todaHashem && typeof insight.todaHashem === 'string' && insight.todaHashem.length > 0) {
+            todaSection.style.display = 'block';
+            todaTxtBox.innerHTML = `
+                <div class="pardes-section-block toda-hashem-block" style="border-right-color: var(--accent-gold);">
+                    <div class="pardes-section-title">תודה ה'</div>
+                    <div class="pardes-section-content">
+                        ${insight.todaHashem.split('\n').map(p => `<p>${p}</p>`).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            todaSection.style.display = 'none';
+            todaTxtBox.innerHTML = '';
+        }
+    }
 }
 
 function applyReaderFontSize() {
     const elements = [
         document.getElementById('reader-verse-text'),
-        document.getElementById('reader-general-text')
+        document.getElementById('reader-general-text'),
+        document.getElementById('reader-toda-text')
     ];
     elements.forEach(el => {
         if (el) {
@@ -1411,6 +1638,14 @@ function initScribeDesk() {
 }
 
 // --- View 4: Gematria Calculator ---
+let gematriaSyncTimeout = null;
+function saveGematriaQueryToServer(val) {
+    clearTimeout(gematriaSyncTimeout);
+    gematriaSyncTimeout = setTimeout(() => {
+        saveLocalStorage('torah_gematria_query', val);
+    }, 500);
+}
+
 function initGematriaCalculator() {
     const calcInput = document.getElementById('calc-input');
     const resultBox = document.getElementById('calc-result-box');
@@ -1418,12 +1653,17 @@ function initGematriaCalculator() {
     const resultHeb = document.getElementById('calc-result-heb');
     const matchesSection = document.getElementById('calc-matches-section');
     const matchesGrid = document.getElementById('calc-matches-grid');
+    const wordsAnalysis = document.getElementById('gematria-words-analysis');
+    const wordsList = document.getElementById('gematria-words-list');
 
     calcInput.addEventListener('input', () => {
         const val = calcInput.value.trim();
+        saveGematriaQueryToServer(val);
+
         if (!val) {
             resultBox.style.display = 'none';
             matchesSection.style.display = 'none';
+            wordsAnalysis.style.display = 'none';
             return;
         }
 
@@ -1431,6 +1671,7 @@ function initGematriaCalculator() {
         if (score === 0) {
             resultBox.style.display = 'none';
             matchesSection.style.display = 'none';
+            wordsAnalysis.style.display = 'none';
             return;
         }
 
@@ -1438,6 +1679,48 @@ function initGematriaCalculator() {
         resultBox.style.display = 'flex';
         resultNum.innerText = score;
         resultHeb.innerText = `בגימטריה: ${numberToHebrew(score)}`;
+
+        // Word-by-word Gematria analysis
+        const cleanText = stripNikud(val).replace(/[^א-ת\s]/g, "").replace(/\s+/g, " ").trim();
+        if (cleanText) {
+            wordsAnalysis.style.display = 'block';
+            wordsList.innerHTML = "";
+            const words = cleanText.split(' ');
+            words.forEach(word => {
+                if (!word) return;
+                const scoreWord = calculateGematria(word);
+                // Count how many verses in Tanakh have this exact Gematria score
+                const matchCount = State.tanakhVerses.filter(v => v.gematria === scoreWord).length;
+                
+                const span = document.createElement('span');
+                span.style.cursor = 'pointer';
+                span.style.padding = '0.3rem 0.6rem';
+                span.style.background = 'var(--bg-secondary)';
+                span.style.border = '1px solid var(--border-gold)';
+                span.style.borderRadius = 'var(--border-radius-sm)';
+                span.style.transition = 'all 0.2s';
+                span.style.fontSize = '1.05rem';
+                span.innerHTML = `${word} = ${scoreWord} <span style="color: var(--accent-gold); font-weight: bold;">(${matchCount})</span>`;
+                
+                span.addEventListener('mouseenter', () => {
+                    span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                    span.style.borderColor = 'var(--accent-gold)';
+                });
+                span.addEventListener('mouseleave', () => {
+                    span.style.background = 'var(--bg-secondary)';
+                    span.style.borderColor = 'var(--border-gold)';
+                });
+                
+                span.addEventListener('click', () => {
+                    calcInput.value = word;
+                    calcInput.dispatchEvent(new Event('input'));
+                });
+                
+                wordsList.appendChild(span);
+            });
+        } else {
+            wordsAnalysis.style.display = 'none';
+        }
 
         // Scan the entire Tanakh for matches
         const matches = State.tanakhVerses.filter(v => v.gematria === score);
@@ -1453,27 +1736,35 @@ function initGematriaCalculator() {
             
             if (matches.length > limit) {
                 const note = document.createElement('div');
-                note.style.gridColumn = '1 / -1';
                 note.style.textAlign = 'center';
                 note.style.color = 'var(--accent-gold)';
                 note.style.fontWeight = 'bold';
                 note.style.marginBottom = '1rem';
+                note.style.fontSize = '1.1rem';
                 note.innerText = `נמצאו ${matches.length} פסוקים בגימטריה זו. מציג את 50 הראשונים:`;
                 matchesGrid.appendChild(note);
             }
 
             displayMatches.forEach(match => {
                 const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
-                const card = document.createElement('div');
-                card.className = `insight-card ${insightMatch ? 'has-commentary-card' : 'no-commentary-card'}`;
+                
+                const item = document.createElement('div');
+                item.className = 'gematria-repetition-item';
+                item.style.cursor = 'pointer';
+                item.style.padding = '0.5rem 0';
+                item.style.borderBottom = '1px solid var(--border-color)';
+                item.style.transition = 'color 0.2s';
+                
+                item.addEventListener('mouseenter', () => { item.style.color = 'var(--accent-gold)'; });
+                item.addEventListener('mouseleave', () => { item.style.color = ''; });
                 
                 if (insightMatch) {
-                    card.addEventListener('click', () => {
+                    item.addEventListener('click', () => {
                         openInsightReader(insightMatch.id);
                         switchView('insight-reader-view');
                     });
                 } else {
-                    card.addEventListener('click', () => {
+                    item.addEventListener('click', () => {
                         document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
                         document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
                         switchView('scribe-desk-view');
@@ -1488,25 +1779,13 @@ function initGematriaCalculator() {
                     });
                 }
                 
-                const headingTitle = `${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)}`;
-                const badgeLabel = insightMatch ? `<span class="card-category" style="background-color: rgba(var(--accent-gold-rgb), 0.15); color: var(--accent-gold);"><i class="fa-solid fa-book-open"></i> יש פירוש</span>` : `<span class="card-category" style="background-color: var(--bg-secondary); color: var(--text-muted);"><i class="fa-solid fa-pen-clip"></i> כתוב פירוש</span>`;
-                
-                card.innerHTML = `
-                    <div class="card-header">
-                        ${badgeLabel}
-                        <span class="card-date">גימטריה ${score}</span>
-                    </div>
-                    <h3 class="card-title">${headingTitle}</h3>
-                    <div class="card-verse">${match.originalText}</div>
-                    <div class="card-footer" style="border-top: none; padding-top: 0;">
-                        <span class="card-author"><i class="fa-regular fa-bookmark"></i> ${insightMatch ? insightMatch.author : 'מאגר תנ"ך מקומי'}</span>
-                    </div>
-                `;
-                matchesGrid.appendChild(card);
+                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
+                matchesGrid.appendChild(item);
             });
         } else {
             matchesGrid.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1; padding: 2rem 0;">
+                <div class="empty-state" style="padding: 2rem 0;">
                     <p>לא נמצאו פסוקים במאגר בעלי גימטריה זהה ל-${score}.</p>
                 </div>
             `;
@@ -1527,6 +1806,11 @@ function initWordRepetitionCalculator() {
     const matchesSection = document.getElementById('word-matches-section');
     const matchesGrid = document.getElementById('word-matches-grid');
     const matchesCount = document.getElementById('word-matches-count');
+
+    const verseInput = document.getElementById('verse-analysis-input');
+    const analysisResults = document.getElementById('verse-analysis-results');
+    const wordsList = document.getElementById('words-analysis-list');
+    const pairsList = document.getElementById('pairs-analysis-list');
 
     if (!searchInput) return;
 
@@ -1559,11 +1843,11 @@ function initWordRepetitionCalculator() {
 
         if (matches.length > limit) {
             const note = document.createElement('div');
-            note.style.gridColumn = '1 / -1';
             note.style.textAlign = 'center';
             note.style.color = 'var(--accent-gold)';
             note.style.fontWeight = 'bold';
             note.style.marginBottom = '1rem';
+            note.style.fontSize = '1.1rem';
             note.innerText = `נמצאו ${matches.length} תוצאות. מציג את 50 הראשונות:`;
             matchesGrid.appendChild(note);
         }
@@ -1572,16 +1856,24 @@ function initWordRepetitionCalculator() {
             displayMatches.forEach(match => {
                 const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
                 
-                const card = document.createElement('div');
-                card.className = `insight-card ${insightMatch ? 'has-commentary-card' : 'no-commentary-card'}`;
+                const item = document.createElement('div');
+                item.className = 'word-repetition-item';
+                item.style.cursor = 'pointer';
+                item.style.padding = '0.5rem 0';
+                item.style.borderBottom = '1px solid var(--border-color)';
+                item.style.transition = 'color 0.2s';
+                
+                // Add hover style
+                item.addEventListener('mouseenter', () => { item.style.color = 'var(--accent-gold)'; });
+                item.addEventListener('mouseleave', () => { item.style.color = ''; });
                 
                 if (insightMatch) {
-                    card.addEventListener('click', () => {
+                    item.addEventListener('click', () => {
                         openInsightReader(insightMatch.id);
                         switchView('insight-reader-view');
                     });
                 } else {
-                    card.addEventListener('click', () => {
+                    item.addEventListener('click', () => {
                         document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
                         document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
                         switchView('scribe-desk-view');
@@ -1596,31 +1888,224 @@ function initWordRepetitionCalculator() {
                     });
                 }
                 
-                const headingTitle = `${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)}`;
-                const badgeLabel = insightMatch ? `<span class="card-category" style="background-color: rgba(var(--accent-gold-rgb), 0.15); color: var(--accent-gold);"><i class="fa-solid fa-book-open"></i> יש פירוש</span>` : `<span class="card-category" style="background-color: var(--bg-secondary); color: var(--text-muted);"><i class="fa-solid fa-pen-clip"></i> כתוב פירוש</span>`;
-                
-                card.innerHTML = `
-                    <div class="card-header">
-                        ${badgeLabel}
-                        <span class="card-date">תנ"ך</span>
-                    </div>
-                    <h3 class="card-title">${headingTitle}</h3>
-                    <div class="card-verse">${match.originalText}</div>
-                    <div class="card-footer" style="border-top: none; padding-top: 0;">
-                        <span class="card-author"><i class="fa-regular fa-bookmark"></i> ${insightMatch ? insightMatch.author : 'מאגר תנ"ך מקומי'}</span>
-                    </div>
-                `;
-                matchesGrid.appendChild(card);
+                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
+                matchesGrid.appendChild(item);
             });
         } else {
             matchesGrid.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1; padding: 2rem 0;">
+                <div class="empty-state" style="padding: 2rem 0;">
                     <p>לא נמצאו פסוקים המכילים את רצף האותיות "${query}".</p>
                 </div>
             `;
         }
     });
+
+    if (verseInput) {
+        verseInput.addEventListener('input', () => {
+            const val = verseInput.value.trim();
+            if (!val) {
+                analysisResults.style.display = 'none';
+                return;
+            }
+
+            // Clean text: strip nikud and punctuation, keep letters and spaces
+            const cleanText = stripNikud(val).replace(/[^א-ת\s]/g, "").replace(/\s+/g, " ").trim();
+            if (!cleanText) {
+                analysisResults.style.display = 'none';
+                return;
+            }
+
+            const words = cleanText.split(' ');
+            
+            // Get elements for triplets and quads
+            const tripletsList = document.getElementById('triplets-analysis-list');
+            const quadsList = document.getElementById('quads-analysis-list');
+
+            // 1. Word analysis
+            wordsList.innerHTML = "";
+            words.forEach(word => {
+                if (!word) return;
+                // Exact word match check
+                const regex = new RegExp('(^|[^א-ת])' + word + '($|[^א-ת])');
+                const count = State.tanakhVerses.filter(v => regex.test(v.cleanText)).length;
+
+                const span = document.createElement('span');
+                span.style.cursor = 'pointer';
+                span.style.padding = '0.3rem 0.6rem';
+                span.style.background = 'var(--bg-secondary)';
+                span.style.border = '1px solid var(--border-gold)';
+                span.style.borderRadius = 'var(--border-radius-sm)';
+                span.style.transition = 'all 0.2s';
+                span.style.fontSize = '1.05rem';
+                span.innerHTML = `${word} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                
+                span.addEventListener('mouseenter', () => {
+                    span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                    span.style.borderColor = 'var(--accent-gold)';
+                });
+                span.addEventListener('mouseleave', () => {
+                    span.style.background = 'var(--bg-secondary)';
+                    span.style.borderColor = 'var(--border-gold)';
+                });
+                
+                span.addEventListener('click', () => {
+                    searchInput.value = word;
+                    searchInput.dispatchEvent(new Event('input'));
+                    searchInput.scrollIntoView({ behavior: 'smooth' });
+                    searchInput.focus();
+                });
+
+                wordsList.appendChild(span);
+            });
+
+            // 2. Pairs analysis
+            pairsList.innerHTML = "";
+            const pairs = [];
+            for (let i = 0; i < words.length - 1; i++) {
+                if (words[i] && words[i+1]) {
+                    pairs.push(words[i] + " " + words[i+1]);
+                }
+            }
+
+            if (pairs.length === 0) {
+                pairsList.innerHTML = `<span style="color: var(--text-muted); font-size: 0.95rem;">אין מספיק מילים ליצירת צמדים.</span>`;
+            } else {
+                pairs.forEach(pair => {
+                    const regex = new RegExp('(^|[^א-ת])' + pair + '($|[^א-ת])');
+                    const count = State.tanakhVerses.filter(v => regex.test(v.cleanText)).length;
+
+                    const span = document.createElement('span');
+                    span.style.cursor = 'pointer';
+                    span.style.padding = '0.3rem 0.6rem';
+                    span.style.background = 'var(--bg-secondary)';
+                    span.style.border = '1px solid var(--border-gold)';
+                    span.style.borderRadius = 'var(--border-radius-sm)';
+                    span.style.transition = 'all 0.2s';
+                    span.style.fontSize = '1.05rem';
+                    span.innerHTML = `${pair} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                    
+                    span.addEventListener('mouseenter', () => {
+                        span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                        span.style.borderColor = 'var(--accent-gold)';
+                    });
+                    span.addEventListener('mouseleave', () => {
+                        span.style.background = 'var(--bg-secondary)';
+                        span.style.borderColor = 'var(--border-gold)';
+                    });
+                    
+                    span.addEventListener('click', () => {
+                        searchInput.value = pair;
+                        searchInput.dispatchEvent(new Event('input'));
+                        searchInput.scrollIntoView({ behavior: 'smooth' });
+                        searchInput.focus();
+                    });
+
+                    pairsList.appendChild(span);
+                });
+            }
+
+            // 3. Triplets analysis
+            if (tripletsList) {
+                tripletsList.innerHTML = "";
+                const triplets = [];
+                for (let i = 0; i < words.length - 2; i++) {
+                    if (words[i] && words[i+1] && words[i+2]) {
+                        triplets.push(words[i] + " " + words[i+1] + " " + words[i+2]);
+                    }
+                }
+
+                if (triplets.length === 0) {
+                    tripletsList.innerHTML = `<span style="color: var(--text-muted); font-size: 0.95rem;">אין מספיק מילים ליצירת שלשות.</span>`;
+                } else {
+                    triplets.forEach(triplet => {
+                        const regex = new RegExp('(^|[^א-ת])' + triplet + '($|[^א-ת])');
+                        const count = State.tanakhVerses.filter(v => regex.test(v.cleanText)).length;
+
+                        const span = document.createElement('span');
+                        span.style.cursor = 'pointer';
+                        span.style.padding = '0.3rem 0.6rem';
+                        span.style.background = 'var(--bg-secondary)';
+                        span.style.border = '1px solid var(--border-gold)';
+                        span.style.borderRadius = 'var(--border-radius-sm)';
+                        span.style.transition = 'all 0.2s';
+                        span.style.fontSize = '1.05rem';
+                        span.innerHTML = `${triplet} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                        
+                        span.addEventListener('mouseenter', () => {
+                            span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                            span.style.borderColor = 'var(--accent-gold)';
+                        });
+                        span.addEventListener('mouseleave', () => {
+                            span.style.background = 'var(--bg-secondary)';
+                            span.style.borderColor = 'var(--border-gold)';
+                        });
+                        
+                        span.addEventListener('click', () => {
+                            searchInput.value = triplet;
+                            searchInput.dispatchEvent(new Event('input'));
+                            searchInput.scrollIntoView({ behavior: 'smooth' });
+                            searchInput.focus();
+                        });
+
+                        tripletsList.appendChild(span);
+                    });
+                }
+            }
+
+            // 4. Quads analysis
+            if (quadsList) {
+                quadsList.innerHTML = "";
+                const quads = [];
+                for (let i = 0; i < words.length - 3; i++) {
+                    if (words[i] && words[i+1] && words[i+2] && words[i+3]) {
+                        quads.push(words[i] + " " + words[i+1] + " " + words[i+2] + " " + words[i+3]);
+                    }
+                }
+
+                if (quads.length === 0) {
+                    quadsList.innerHTML = `<span style="color: var(--text-muted); font-size: 0.95rem;">אין מספיק מילים ליצירת רביעיות.</span>`;
+                } else {
+                    quads.forEach(quad => {
+                        const regex = new RegExp('(^|[^א-ת])' + quad + '($|[^א-ת])');
+                        const count = State.tanakhVerses.filter(v => regex.test(v.cleanText)).length;
+
+                        const span = document.createElement('span');
+                        span.style.cursor = 'pointer';
+                        span.style.padding = '0.3rem 0.6rem';
+                        span.style.background = 'var(--bg-secondary)';
+                        span.style.border = '1px solid var(--border-gold)';
+                        span.style.borderRadius = 'var(--border-radius-sm)';
+                        span.style.transition = 'all 0.2s';
+                        span.style.fontSize = '1.05rem';
+                        span.innerHTML = `${quad} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                        
+                        span.addEventListener('mouseenter', () => {
+                            span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                            span.style.borderColor = 'var(--accent-gold)';
+                        });
+                        span.addEventListener('mouseleave', () => {
+                            span.style.background = 'var(--bg-secondary)';
+                            span.style.borderColor = 'var(--border-gold)';
+                        });
+                        
+                        span.addEventListener('click', () => {
+                            searchInput.value = quad;
+                            searchInput.dispatchEvent(new Event('input'));
+                            searchInput.scrollIntoView({ behavior: 'smooth' });
+                            searchInput.focus();
+                        });
+
+                        quadsList.appendChild(span);
+                    });
+                }
+            }
+
+            analysisResults.style.display = 'block';
+        });
+    }
 }
+
 
 function getCommentaryCounts() {
     const countsMap = {};
@@ -2564,5 +3049,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initWordRepetitionCalculator();
     initLibraryView();
     initAdminModals(); // Initialize modal handlers for Admin
-    loadDefaultData();
+    loadFromServer().then(() => {
+        loadDefaultData();
+    });
 });
