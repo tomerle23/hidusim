@@ -22,7 +22,8 @@ const State = {
     userRole: 'user',    // 'user' or 'admin'
     pendingRequests: [], // Admin approval queue
     deletedDefaultIds: [], // IDs of deleted default insights
-    editedDefaultInsights: {} // Merged edits of default insights keyed by ID
+    editedDefaultInsights: {}, // Merged edits of default insights keyed by ID
+    editedVerses: {}     // Admin-edited Tanakh verses keyed by "bookHeb|chapter|verse"
 };
 
 // --- Gematria Engine ---
@@ -159,7 +160,14 @@ function initOfflineTanakh() {
     }
     
     console.time("Indexing Tanakh");
-    const bookNames = Object.keys(TanakhData);
+    const bookOrder = [
+        "Gen", "Exod", "Lev", "Num", "Deut",
+        "Josh", "Judg", "1Sam", "2Sam", "1Kgs", "2Kgs",
+        "Isa", "Jer", "Ezek",
+        "Hos", "Joel", "Amos", "Obad", "Jonah", "Mic", "Nah", "Hab", "Zeph", "Hag", "Zech", "Mal",
+        "Ps", "Prov", "Job", "Song", "Ruth", "Lam", "Eccl", "Esth", "Dan", "Ezra", "Neh", "1Chr", "2Chr"
+    ];
+    const bookNames = Object.keys(TanakhData).sort((a, b) => bookOrder.indexOf(a) - bookOrder.indexOf(b));
     
     const RikarttToHebrewMap = {
         "Gen": { eng: "Genesis", heb: "בראשית" },
@@ -230,6 +238,20 @@ function initOfflineTanakh() {
         }
     }
     State.tanakhVerses = verses;
+
+    // Merge any admin-edited verses over the originals
+    if (Object.keys(State.editedVerses).length > 0) {
+        State.tanakhVerses.forEach(v => {
+            const key = `${v.bookHeb}|${v.chapter}|${v.verse}`;
+            if (State.editedVerses[key]) {
+                const edited = State.editedVerses[key];
+                v.originalText = edited.originalText;
+                v.cleanText = stripNikud(edited.originalText);
+                v.gematria = calculateGematria(v.cleanText);
+            }
+        });
+    }
+
     console.timeEnd("Indexing Tanakh");
     console.log(`Indexed ${State.tanakhVerses.length} verses from local Tanakh.`);
 }
@@ -433,6 +455,9 @@ function loadLocalStorage() {
 
     const editedDefaults = localStorage.getItem('torah_edited_default_insights');
     if (editedDefaults) State.editedDefaultInsights = JSON.parse(editedDefaults);
+
+    const editedVerses = localStorage.getItem('torah_edited_verses');
+    if (editedVerses) State.editedVerses = JSON.parse(editedVerses);
 }
 
 function saveLocalStorage(key, data) {
@@ -669,6 +694,8 @@ function initNavigation() {
                 renderCommentaryIndex();
             } else if (targetId === 'admin-requests-view') {
                 renderAdminRequests();
+            } else if (targetId === 'admin-verse-view') {
+                initAdminVerseManagement();
             }
         });
     });
@@ -701,8 +728,20 @@ function initNavigation() {
                         link.classList.remove('active');
                     }
                 });
+            } else if ((State.activeView === 'admin-verse-view') && State.userRole !== 'admin') {
+                // If on admin verse view but switched to user, redirect
+                switchView('study-hall-view');
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    if (link.getAttribute('data-target') === 'study-hall-view') {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
             } else if (State.activeView === 'admin-requests-view') {
                 renderAdminRequests();
+            } else if (State.activeView === 'admin-verse-view') {
+                initAdminVerseManagement();
             }
         });
     }
@@ -748,7 +787,9 @@ function applyRoleSettings() {
     
     if (State.userRole === 'admin') {
         adminElements.forEach(el => {
-            if (el.tagName === 'BUTTON' || el.tagName === 'NAV' || el.tagName === 'SPAN') {
+            if (el.id === 'nav-qere-ketiv') {
+                el.style.display = 'inline-block';
+            } else if (el.tagName === 'BUTTON' || el.tagName === 'NAV' || el.tagName === 'SPAN') {
                 el.style.display = 'inline-block';
             } else if (el.tagName === 'DIV' || el.tagName === 'SECTION') {
                 el.style.display = 'block';
@@ -1831,73 +1872,151 @@ function initWordRepetitionCalculator() {
         const exactWordRegex = new RegExp('(^|[^א-ת])' + cleanQuery + '($|[^א-ת])');
         const matches = State.tanakhVerses.filter(v => exactWordRegex.test(v.cleanText));
 
-        // Update count
+        // Update count & query text display
         matchesCount.innerText = matches.length;
+        const qDisp = document.getElementById('word-search-query-display');
+        if (qDisp) qDisp.textContent = searchInput.value.trim();
         matchesSection.style.display = 'block';
 
         matchesGrid.innerHTML = "";
-        
-        // Show first 50 results to prevent DOM lag
-        const limit = 50;
-        const displayMatches = matches.slice(0, limit);
 
-        if (matches.length > limit) {
-            const note = document.createElement('div');
-            note.style.textAlign = 'center';
-            note.style.color = 'var(--accent-gold)';
-            note.style.fontWeight = 'bold';
-            note.style.marginBottom = '1rem';
-            note.style.fontSize = '1.1rem';
-            note.innerText = `נמצאו ${matches.length} תוצאות. מציג את 50 הראשונות:`;
-            matchesGrid.appendChild(note);
+        // Store matches for frequency filter
+        searchInput._lastMatches = matches;
+
+        // Build per-word frequency map from the found verses
+        const freqMap = {}; // word -> count of verses it appears in (for this specific search)
+        // Actually for the frequency filter: count how many times the searched word appears
+        // across distinct verses, already done: matches.length is the verse count.
+        // Dropdown should allow filtering the word-matches by "word that appears N times in Tanakh"
+        // Meaning: user searches for a word -> sees 50 verses.
+        // Frequency filter: show only verses where a SPECIFIC word from the verse appears N times in whole Tanakh.
+        // Per implementation plan: populate dropdown with unique occurrence counts for individual words.
+        // Build unique counts from per-word occurrence across all tanakh:
+        // For word-search, frequency filter filters verses by how many times the searched word itself
+        // appears: so we only need counts per matching verse (all same word).
+        // Simplest: filter the verse list by occurrence count of the primary searched word.
+        // matches.length = total appearances. Allow filtering to show only if count === selected.
+        // That means: "show all verses" or "show only if total count = N".
+        // Better interpretation: filter based on match count buckets.
+        // We'll populate with the count itself (one option: the actual total), plus 'all'.
+        const freqFilter = document.getElementById('word-frequency-filter');
+        if (freqFilter) {
+            // Get unique individual word occurrence counts across all tanakh verses in result set
+            // For simplicity: build a set of unique total-count values across the display
+            const wordCountMap = {};
+            matches.forEach(v => {
+                const words = v.cleanText.split(' ').filter(w => w.length > 1);
+                words.forEach(w => {
+                    if (!wordCountMap[w]) {
+                        const r = new RegExp('(^|[^\u05d0-\u05ea])' + w + '($|[^\u05d0-\u05ea])');
+                        wordCountMap[w] = State.tanakhVerses.filter(vv => r.test(vv.cleanText)).length;
+                    }
+                });
+            });
+            const uniqueCounts = [...new Set(Object.values(wordCountMap))].sort((a,b) => a-b);
+            freqFilter.innerHTML = '<option value="all">\u05db\u05dc \u05d4\u05de\u05d9\u05dc\u05d9\u05dd</option>';
+            uniqueCounts.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = `${c} \u05e4\u05e2\u05de\u05d9\u05dd`;
+                freqFilter.appendChild(opt);
+            });
+            freqFilter._wordCountMap = wordCountMap;
+            freqFilter._allMatches = matches;
         }
 
-        if (displayMatches.length > 0) {
-            displayMatches.forEach(match => {
-                const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
-                
-                const item = document.createElement('div');
-                item.className = 'word-repetition-item';
-                item.style.cursor = 'pointer';
-                item.style.padding = '0.5rem 0';
-                item.style.borderBottom = '1px solid var(--border-color)';
-                item.style.transition = 'color 0.2s';
-                
-                // Add hover style
-                item.addEventListener('mouseenter', () => { item.style.color = 'var(--accent-gold)'; });
-                item.addEventListener('mouseleave', () => { item.style.color = ''; });
-                
-                if (insightMatch) {
-                    item.addEventListener('click', () => {
-                        openInsightReader(insightMatch.id);
-                        switchView('insight-reader-view');
-                    });
-                } else {
-                    item.addEventListener('click', () => {
-                        document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
-                        document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
-                        switchView('scribe-desk-view');
-                        
-                        document.querySelectorAll('.nav-link').forEach(link => {
-                            if (link.getAttribute('data-target') === 'scribe-desk-view') {
-                                link.classList.add('active');
-                            } else {
-                                link.classList.remove('active');
-                            }
+        // Render based on current filter
+        const renderWordMatches = (filteredMatches) => {
+            matchesGrid.innerHTML = "";
+
+            // Show first 50 results to prevent DOM lag
+            const limit = 50;
+            const displayMatches = filteredMatches.slice(0, limit);
+
+            if (filteredMatches.length > limit) {
+                const note = document.createElement('div');
+                note.style.textAlign = 'center';
+                note.style.color = 'var(--accent-gold)';
+                note.style.fontWeight = 'bold';
+                note.style.marginBottom = '1rem';
+                note.style.fontSize = '1.1rem';
+                note.innerText = `\u05e0\u05de\u05e6\u05d0\u05d5 ${filteredMatches.length} \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea. \u05de\u05e6\u05d9\u05d2 \u05d0\u05ea 50 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d5\u05ea:`;
+                matchesGrid.appendChild(note);
+            }
+
+            if (displayMatches.length > 0) {
+                displayMatches.forEach(match => {
+                    const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
+                    
+                    const item = document.createElement('div');
+                    item.className = 'word-repetition-item';
+                    item.style.cursor = 'pointer';
+                    item.style.padding = '0.5rem 0';
+                    item.style.borderBottom = '1px solid var(--border-color)';
+                    item.style.transition = 'color 0.2s';
+                    
+                    item.addEventListener('mouseenter', () => { item.style.color = 'var(--accent-gold)'; });
+                    item.addEventListener('mouseleave', () => { item.style.color = ''; });
+                    
+                    if (insightMatch) {
+                        item.addEventListener('click', () => {
+                            openInsightReader(insightMatch.id);
+                            switchView('insight-reader-view');
                         });
+                    } else {
+                        item.addEventListener('click', () => {
+                            document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
+                            document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
+                            switchView('scribe-desk-view');
+                            
+                            document.querySelectorAll('.nav-link').forEach(link => {
+                                if (link.getAttribute('data-target') === 'scribe-desk-view') {
+                                    link.classList.add('active');
+                                } else {
+                                    link.classList.remove('active');
+                                }
+                            });
+                        });
+                    }
+                    
+                    const sourceLabel = `(${match.bookHeb} \u05e4\u05e8\u05e7 ${numberToHebrew(match.chapter)} \u05e4\u05e1\u05d5\u05e7 ${numberToHebrew(match.verse)})`;
+                    item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
+                    matchesGrid.appendChild(item);
+                });
+            } else {
+                matchesGrid.innerHTML = `
+                    <div class="empty-state" style="padding: 2rem 0;">
+                        <p>\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e4\u05e1\u05d5\u05e7\u05d9\u05dd \u05d1\u05e1\u05d9\u05e0\u05d5\u05df \u05d6\u05d4.</p>
+                    </div>
+                `;
+            }
+        };
+
+        renderWordMatches(matches);
+
+        // Wire frequency filter change
+        if (freqFilter && !freqFilter._listenerAdded) {
+            freqFilter._listenerAdded = true;
+            freqFilter.addEventListener('change', () => {
+                const val = freqFilter.value;
+                const allM = freqFilter._allMatches || [];
+                const wcMap = freqFilter._wordCountMap || {};
+                if (val === 'all') {
+                    matchesCount.innerText = allM.length;
+                    renderWordMatches(allM);
+                } else {
+                    const n = parseInt(val);
+                    const filtered = allM.filter(v => {
+                        const words = v.cleanText.split(' ').filter(w => w.length > 1);
+                        return words.some(w => wcMap[w] === n);
                     });
+                    matchesCount.innerText = filtered.length;
+                    renderWordMatches(filtered);
                 }
-                
-                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
-                item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
-                matchesGrid.appendChild(item);
             });
-        } else {
-            matchesGrid.innerHTML = `
-                <div class="empty-state" style="padding: 2rem 0;">
-                    <p>לא נמצאו פסוקים המכילים את רצף האותיות "${query}".</p>
-                </div>
-            `;
+        } else if (freqFilter) {
+            // Update stored references even if listener was already added
+            freqFilter._allMatches = matches;
         }
     });
 
@@ -1933,20 +2052,38 @@ function initWordRepetitionCalculator() {
                 const span = document.createElement('span');
                 span.style.cursor = 'pointer';
                 span.style.padding = '0.3rem 0.6rem';
-                span.style.background = 'var(--bg-secondary)';
-                span.style.border = '1px solid var(--border-gold)';
                 span.style.borderRadius = 'var(--border-radius-sm)';
                 span.style.transition = 'all 0.2s';
                 span.style.fontSize = '1.05rem';
-                span.innerHTML = `${word} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                
+                // Highlight bold if count is between 2 and 6 inclusive
+                if (count >= 2 && count <= 6) {
+                    span.style.background = '#ffe3e3';
+                    span.style.border = '2px solid #ff8787';
+                    span.style.fontWeight = '900';
+                    span.style.color = '#c92a2a';
+                } else {
+                    span.style.background = 'var(--bg-secondary)';
+                    span.style.border = '1px solid var(--border-gold)';
+                }
+                
+                span.innerHTML = `${word} <span style="font-weight: bold;">(${count})</span>`;
                 
                 span.addEventListener('mouseenter', () => {
-                    span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
-                    span.style.borderColor = 'var(--accent-gold)';
+                    if (count >= 2 && count <= 6) {
+                        span.style.background = '#ffc9c9';
+                    } else {
+                        span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                        span.style.borderColor = 'var(--accent-gold)';
+                    }
                 });
                 span.addEventListener('mouseleave', () => {
-                    span.style.background = 'var(--bg-secondary)';
-                    span.style.borderColor = 'var(--border-gold)';
+                    if (count >= 2 && count <= 6) {
+                        span.style.background = '#ffe3e3';
+                    } else {
+                        span.style.background = 'var(--bg-secondary)';
+                        span.style.borderColor = 'var(--border-gold)';
+                    }
                 });
                 
                 span.addEventListener('click', () => {
@@ -1978,20 +2115,38 @@ function initWordRepetitionCalculator() {
                     const span = document.createElement('span');
                     span.style.cursor = 'pointer';
                     span.style.padding = '0.3rem 0.6rem';
-                    span.style.background = 'var(--bg-secondary)';
-                    span.style.border = '1px solid var(--border-gold)';
                     span.style.borderRadius = 'var(--border-radius-sm)';
                     span.style.transition = 'all 0.2s';
                     span.style.fontSize = '1.05rem';
-                    span.innerHTML = `${pair} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                    
+                    // Highlight bold if count is between 2 and 6 inclusive
+                    if (count >= 2 && count <= 6) {
+                        span.style.background = '#ffe3e3';
+                        span.style.border = '2px solid #ff8787';
+                        span.style.fontWeight = '900';
+                        span.style.color = '#c92a2a';
+                    } else {
+                        span.style.background = 'var(--bg-secondary)';
+                        span.style.border = '1px solid var(--border-gold)';
+                    }
+                    
+                    span.innerHTML = `${pair} <span style="font-weight: bold;">(${count})</span>`;
                     
                     span.addEventListener('mouseenter', () => {
-                        span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
-                        span.style.borderColor = 'var(--accent-gold)';
+                        if (count >= 2 && count <= 6) {
+                            span.style.background = '#ffc9c9';
+                        } else {
+                            span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                            span.style.borderColor = 'var(--accent-gold)';
+                        }
                     });
                     span.addEventListener('mouseleave', () => {
-                        span.style.background = 'var(--bg-secondary)';
-                        span.style.borderColor = 'var(--border-gold)';
+                        if (count >= 2 && count <= 6) {
+                            span.style.background = '#ffe3e3';
+                        } else {
+                            span.style.background = 'var(--bg-secondary)';
+                            span.style.borderColor = 'var(--border-gold)';
+                        }
                     });
                     
                     span.addEventListener('click', () => {
@@ -2025,20 +2180,38 @@ function initWordRepetitionCalculator() {
                         const span = document.createElement('span');
                         span.style.cursor = 'pointer';
                         span.style.padding = '0.3rem 0.6rem';
-                        span.style.background = 'var(--bg-secondary)';
-                        span.style.border = '1px solid var(--border-gold)';
                         span.style.borderRadius = 'var(--border-radius-sm)';
                         span.style.transition = 'all 0.2s';
                         span.style.fontSize = '1.05rem';
-                        span.innerHTML = `${triplet} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                        
+                        // Highlight bold if count is between 2 and 6 inclusive
+                        if (count >= 2 && count <= 6) {
+                            span.style.background = '#ffe3e3';
+                            span.style.border = '2px solid #ff8787';
+                            span.style.fontWeight = '900';
+                            span.style.color = '#c92a2a';
+                        } else {
+                            span.style.background = 'var(--bg-secondary)';
+                            span.style.border = '1px solid var(--border-gold)';
+                        }
+                        
+                        span.innerHTML = `${triplet} <span style="font-weight: bold;">(${count})</span>`;
                         
                         span.addEventListener('mouseenter', () => {
-                            span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
-                            span.style.borderColor = 'var(--accent-gold)';
+                            if (count >= 2 && count <= 6) {
+                                span.style.background = '#ffc9c9';
+                            } else {
+                                span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                                span.style.borderColor = 'var(--accent-gold)';
+                            }
                         });
                         span.addEventListener('mouseleave', () => {
-                            span.style.background = 'var(--bg-secondary)';
-                            span.style.borderColor = 'var(--border-gold)';
+                            if (count >= 2 && count <= 6) {
+                                span.style.background = '#ffe3e3';
+                            } else {
+                                span.style.background = 'var(--bg-secondary)';
+                                span.style.borderColor = 'var(--border-gold)';
+                            }
                         });
                         
                         span.addEventListener('click', () => {
@@ -2073,20 +2246,38 @@ function initWordRepetitionCalculator() {
                         const span = document.createElement('span');
                         span.style.cursor = 'pointer';
                         span.style.padding = '0.3rem 0.6rem';
-                        span.style.background = 'var(--bg-secondary)';
-                        span.style.border = '1px solid var(--border-gold)';
                         span.style.borderRadius = 'var(--border-radius-sm)';
                         span.style.transition = 'all 0.2s';
                         span.style.fontSize = '1.05rem';
-                        span.innerHTML = `${quad} <span style="color: var(--accent-gold); font-weight: bold;">(${count})</span>`;
+                        
+                        // Highlight bold if count is between 2 and 6 inclusive
+                        if (count >= 2 && count <= 6) {
+                            span.style.background = '#ffe3e3';
+                            span.style.border = '2px solid #ff8787';
+                            span.style.fontWeight = '900';
+                            span.style.color = '#c92a2a';
+                        } else {
+                            span.style.background = 'var(--bg-secondary)';
+                            span.style.border = '1px solid var(--border-gold)';
+                        }
+                        
+                        span.innerHTML = `${quad} <span style="font-weight: bold;">(${count})</span>`;
                         
                         span.addEventListener('mouseenter', () => {
-                            span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
-                            span.style.borderColor = 'var(--accent-gold)';
+                            if (count >= 2 && count <= 6) {
+                                span.style.background = '#ffc9c9';
+                            } else {
+                                span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                                span.style.borderColor = 'var(--accent-gold)';
+                            }
                         });
                         span.addEventListener('mouseleave', () => {
-                            span.style.background = 'var(--bg-secondary)';
-                            span.style.borderColor = 'var(--border-gold)';
+                            if (count >= 2 && count <= 6) {
+                                span.style.background = '#ffe3e3';
+                            } else {
+                                span.style.background = 'var(--bg-secondary)';
+                                span.style.borderColor = 'var(--border-gold)';
+                            }
                         });
                         
                         span.addEventListener('click', () => {
@@ -3049,7 +3240,378 @@ window.addEventListener('DOMContentLoaded', () => {
     initWordRepetitionCalculator();
     initLibraryView();
     initAdminModals(); // Initialize modal handlers for Admin
+    initAdminVerseManagement(); // Initialize admin verse management selectors
     loadFromServer().then(() => {
         loadDefaultData();
     });
 });
+
+// --- Admin Verse Management ---
+function initAdminVerseManagement() {
+    const bookSelect = document.getElementById('av-book-select');
+    const chapterSelect = document.getElementById('av-chapter-select');
+    const loadBtn = document.getElementById('av-load-btn');
+    const container = document.getElementById('admin-verse-container');
+
+    if (!bookSelect || !chapterSelect || !loadBtn || !container) return;
+
+    // Only populate once
+    if (bookSelect.options.length <= 1 && typeof TanakhData !== 'undefined') {
+        const bookOrder = [
+            ["בראשית","Gen"],["שמות","Exod"],["ויקרא","Lev"],["במדבר","Num"],["דברים","Deut"],
+            ["יהושע","Josh"],["שופטים","Judg"],["שמואל א","1Sam"],["שמואל ב","2Sam"],
+            ["מלכים א","1Kgs"],["מלכים ב","2Kgs"],["ישעיהו","Isa"],["ירמיהו","Jer"],
+            ["יחזקאל","Ezek"],["הושע","Hos"],["יואל","Joel"],["עמוס","Amos"],
+            ["עובדיה","Obad"],["יונה","Jonah"],["מיכה","Mic"],["נחום","Nah"],
+            ["חבקוק","Hab"],["צפניה","Zeph"],["חגי","Hag"],["זכריה","Zech"],["מלאכי","Mal"],
+            ["תהילים","Ps"],["משלי","Prov"],["איוב","Job"],["שיר השירים","Song"],
+            ["רות","Ruth"],["איכה","Lam"],["קהלת","Eccl"],["אסתר","Esth"],
+            ["דניאל","Dan"],["עזרא","Ezra"],["נחמיה","Neh"],["דברי הימים א","1Chr"],["דברי הימים ב","2Chr"]
+        ];
+        bookOrder.forEach(([heb, rk]) => {
+            if (TanakhData[rk]) {
+                const opt = document.createElement('option');
+                opt.value = rk;
+                opt.textContent = heb;
+                bookSelect.appendChild(opt);
+            }
+        });
+    }
+
+    // Remove old listeners by cloning
+    const newBookSelect = bookSelect.cloneNode(true);
+    bookSelect.parentNode.replaceChild(newBookSelect, bookSelect);
+    const newChapterSelect = chapterSelect.cloneNode(true);
+    chapterSelect.parentNode.replaceChild(newChapterSelect, chapterSelect);
+    const newLoadBtn = loadBtn.cloneNode(true);
+    loadBtn.parentNode.replaceChild(newLoadBtn, loadBtn);
+
+    const bSel = document.getElementById('av-book-select');
+    const cSel = document.getElementById('av-chapter-select');
+    const lBtn = document.getElementById('av-load-btn');
+
+    bSel.addEventListener('change', () => {
+        const rk = bSel.value;
+        cSel.innerHTML = '<option value="">-- \u05d1\u05d7\u05e8 \u05e4\u05e8\u05e7 --</option>';
+        cSel.disabled = true;
+        lBtn.disabled = true;
+        if (rk && TanakhData[rk]) {
+            const numChapters = TanakhData[rk].length;
+            for (let c = 1; c <= numChapters; c++) {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = `\u05e4\u05e8\u05e7 ${numberToHebrew(c)}`;
+                cSel.appendChild(opt);
+            }
+            cSel.disabled = false;
+        }
+    });
+
+    cSel.addEventListener('change', () => {
+        lBtn.disabled = !cSel.value;
+    });
+
+    lBtn.addEventListener('click', () => {
+        renderAdminVerseList();
+    });
+}
+
+function renderAdminVerseList() {
+    const bSel = document.getElementById('av-book-select');
+    const cSel = document.getElementById('av-chapter-select');
+    const container = document.getElementById('admin-verse-container');
+    if (!bSel || !cSel || !container) return;
+
+    const rk = bSel.value;
+    const chapterNum = parseInt(cSel.value);
+    const bookHeb = bSel.options[bSel.selectedIndex].textContent;
+
+    if (!rk || !chapterNum || !TanakhData[rk]) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">\u05d1\u05d7\u05e8 \u05e1\u05e4\u05e8 \u05d5\u05e4\u05e8\u05e7 \u05ea\u05d7\u05d9\u05dc\u05d4</p>';
+        return;
+    }
+
+    const chapterData = TanakhData[rk][chapterNum - 1];
+    if (!chapterData) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e4\u05e1\u05d5\u05e7\u05d9\u05dd</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    chapterData.forEach((words, vIdx) => {
+        const verseNum = vIdx + 1;
+        const key = `${bookHeb}|${chapterNum}|${verseNum}`;
+        const cleanWords = words.filter(w => w !== 'ס' && w !== 'פ');
+        const currentText = State.editedVerses[key]
+            ? State.editedVerses[key].originalText
+            : cleanWords.join(' ');
+
+        const row = document.createElement('div');
+        row.style.cssText = 'background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;';
+
+        const label = document.createElement('div');
+        label.style.cssText = 'font-size: 0.9rem; color: var(--accent-gold); font-weight: bold; font-family: var(--font-sans);';
+        label.textContent = `${bookHeb} ${numberToHebrew(chapterNum)}:${numberToHebrew(verseNum)}`;
+        if (State.editedVerses[key]) {
+            label.textContent += ' (\u05e2\u05e8\u05d5\u05da)';
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = currentText;
+        textarea.style.cssText = 'width: 100%; min-height: 60px; padding: 0.5rem; font-family: var(--font-serif); font-size: 1.1rem; direction: rtl; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); color: var(--text-primary); resize: vertical; line-height: 1.7;';
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display: flex; gap: 0.5rem; justify-content: flex-end;';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'primary-btn';
+        saveBtn.style.padding = '0.3rem 0.9rem';
+        saveBtn.style.fontSize = '0.9rem';
+        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> \u05e9\u05de\u05d5\u05e8';
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'secondary-btn';
+        resetBtn.style.padding = '0.3rem 0.9rem';
+        resetBtn.style.fontSize = '0.9rem';
+        resetBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> \u05d0\u05e4\u05e1';
+        resetBtn.style.display = State.editedVerses[key] ? 'inline-block' : 'none';
+
+        saveBtn.addEventListener('click', () => {
+            const newText = textarea.value.trim();
+            if (!newText) return;
+            State.editedVerses[key] = { originalText: newText };
+            // Also update the live tanakhVerses for concordance
+            const liveVerse = State.tanakhVerses.find(v => v.bookHeb === bookHeb && v.chapter === chapterNum && v.verse === verseNum);
+            if (liveVerse) {
+                liveVerse.originalText = newText;
+                liveVerse.cleanText = stripNikud(newText);
+                liveVerse.gematria = calculateGematria(liveVerse.cleanText);
+            }
+            saveLocalStorage('torah_edited_verses', State.editedVerses);
+            label.textContent = `${bookHeb} ${numberToHebrew(chapterNum)}:${numberToHebrew(verseNum)} (\u05e2\u05e8\u05d5\u05da)`;
+            resetBtn.style.display = 'inline-block';
+            // Flash save button
+            saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> \u05e0\u05e9\u05de\u05e8!';
+            setTimeout(() => { saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> \u05e9\u05de\u05d5\u05e8'; }, 1500);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (!confirm('\u05d4\u05d0\u05dd \u05dc\u05d0\u05e4\u05e1 \u05d0\u05ea \u05d4\u05e2\u05e8\u05d9\u05db\u05d4?')) return;
+            delete State.editedVerses[key];
+            const originalText = cleanWords.join(' ');
+            textarea.value = originalText;
+            // Also update live tanakhVerses
+            const liveVerse = State.tanakhVerses.find(v => v.bookHeb === bookHeb && v.chapter === chapterNum && v.verse === verseNum);
+            if (liveVerse) {
+                liveVerse.originalText = originalText;
+                liveVerse.cleanText = stripNikud(originalText);
+                liveVerse.gematria = calculateGematria(liveVerse.cleanText);
+            }
+            saveLocalStorage('torah_edited_verses', State.editedVerses);
+            label.textContent = `${bookHeb} ${numberToHebrew(chapterNum)}:${numberToHebrew(verseNum)}`;
+            resetBtn.style.display = 'none';
+        });
+
+        btnRow.appendChild(resetBtn);
+        btnRow.appendChild(saveBtn);
+        row.appendChild(label);
+        row.appendChild(textarea);
+        row.appendChild(btnRow);
+        container.appendChild(row);
+    });
+}
+
+// --- Qere/Ketiv Corrections View ---
+let qkCandidates = [];
+let qkSelectedIndices = new Set();
+let qkSelectedOptions = {}; // index -> 'ketiv' | 'qere'
+
+// Switch target to qere-ketiv-view inside custom navigation
+window.addEventListener('DOMContentLoaded', () => {
+    // Extend navigation to support qere-ketiv-view target
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            const target = link.getAttribute('data-target');
+            if (target === 'qere-ketiv-view') {
+                renderQereKetivView();
+            }
+        });
+    });
+
+    // Add role switcher update hook
+    const roleSelector = document.getElementById('role-selector');
+    if (roleSelector) {
+        roleSelector.addEventListener('change', () => {
+            if (State.activeView === 'qere-ketiv-view' && State.userRole !== 'admin') {
+                switchView('study-hall-view');
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    if (link.getAttribute('data-target') === 'study-hall-view') {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+        });
+    }
+});
+
+async function renderQereKetivView() {
+    const listEl = document.getElementById('qk-verses-list');
+    if (!listEl) return;
+
+    try {
+        const response = await fetch('corrupted_verses.json');
+        if (!response.ok) throw new Error("קובץ לא קיים");
+        qkCandidates = await response.json();
+        
+        // Initialize default selection on first load
+        qkCandidates.forEach((c, idx) => {
+            qkSelectedIndices.add(idx);
+            if (!qkSelectedOptions[idx]) qkSelectedOptions[idx] = 'ketiv';
+        });
+
+        renderQKList();
+    } catch (err) {
+        console.error("שגיאה בטעינת corrupted_verses.json:", err);
+        listEl.innerHTML = `
+            <div class="empty-state" style="border-color: var(--error);">
+                <div class="empty-state-icon" style="color: var(--error);"><i class="fa-solid fa-circle-exclamation"></i></div>
+                <p>שגיאה בטעינת קובץ המקור <code>corrupted_verses.json</code>.</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">ודא שהרצת את התוכנית למציאת השגיאות או שהקובץ קיים בתיקיית העבודה.</p>
+            </div>
+        `;
+    }
+}
+
+function renderQKList() {
+    const listEl = document.getElementById('qk-verses-list');
+    const totalCountEl = document.getElementById('qk-total-count');
+    const selectedCountEl = document.getElementById('qk-selected-count');
+
+    totalCountEl.textContent = qkCandidates.length;
+    selectedCountEl.textContent = qkSelectedIndices.size;
+
+    if (qkCandidates.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-state" style="border-color: var(--success);">
+                <div class="empty-state-icon" style="color: var(--success);"><i class="fa-solid fa-circle-check"></i></div>
+                <p style="font-size: 1.2rem; font-weight: bold; color: var(--success);">לא נמצאו שגיאות כפל קרי וכתיב במאגר!</p>
+                <p>כל הפסוקים מעודכנים ותקינים.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    qkCandidates.forEach((c, idx) => {
+        const isSelected = qkSelectedIndices.has(idx);
+        const activeOpt = qkSelectedOptions[idx];
+
+        // Format raw verse from sdarim
+        let verseText = c.corruptedWord;
+        if (c.sdarimVerse) {
+            verseText = c.sdarimVerse.split(/\s+/).map(w => {
+                const wClean = w.replace(/[\u0591-\u05c7]/g, '');
+                if (wClean === c.ketiv) {
+                    return `<span style="background: rgba(229, 62, 62, 0.1); border-bottom: 2px solid var(--error); padding: 0 0.2rem; color: var(--error); font-weight: bold;">${w}</span>`;
+                }
+                return w;
+            }).join(' ');
+        }
+
+        html += `
+            <div class="editor-container" style="margin-bottom: 1rem; border-color: ${isSelected ? 'var(--success)' : 'var(--border-gold)'}; padding: 1.5rem; background: ${isSelected ? 'rgba(46, 125, 50, 0.01)' : 'var(--bg-primary)'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-gold); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; color: var(--accent-gold); cursor: pointer;">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleQKSelection(${idx})" style="width: 1.15rem; height: 1.15rem; cursor: pointer;">
+                        <span>${c.bookHeb} פרק ${numberToHebrew(c.chapter)} פסוק ${numberToHebrew(c.verse)}</span>
+                    </label>
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">מילה משובשת: <code style="font-size: 1.05rem; color: var(--error);">${c.corruptedWord}</code></span>
+                </div>
+
+                <div style="font-family: var(--font-serif); font-size: 1.35rem; line-height: 1.8; padding: 0.5rem; border-right: 3px solid var(--border-gold); background: rgba(var(--accent-gold-rgb), 0.02); margin-bottom: 1rem;">
+                    ... ${verseText} ...
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+                    <div style="border: 1px solid ${activeOpt === 'ketiv' ? 'var(--success)' : 'var(--border-gold)'}; padding: 0.75rem; border-radius: var(--border-radius-sm); cursor: pointer; background: ${activeOpt === 'ketiv' ? 'rgba(46, 125, 50, 0.05)' : 'white'};" onclick="setQKOption(${idx}, 'ketiv')">
+                        <strong style="color: var(--accent-gold); font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">תיקון לפי ה-כתיב (ללא ניקוד):</strong>
+                        <span style="font-family: var(--font-serif); font-size: 1.2rem; font-weight: bold;">${c.ketiv}</span>
+                    </div>
+                    <div style="border: 1px solid ${activeOpt === 'qere' ? 'var(--success)' : 'var(--border-gold)'}; padding: 0.75rem; border-radius: var(--border-radius-sm); cursor: pointer; background: ${activeOpt === 'qere' ? 'rgba(46, 125, 50, 0.05)' : 'white'};" onclick="setQKOption(${idx}, 'qere')">
+                        <strong style="color: var(--accent-gold); font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">תיקון לפי ה-קרי (עם ניקוד):</strong>
+                        <span style="font-family: var(--font-serif); font-size: 1.2rem; font-weight: bold;">${c.rest}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    listEl.innerHTML = html;
+
+    // Attach button listeners if not already bound
+    const selectAllBtn = document.getElementById('qk-select-all-btn');
+    const applyBtn = document.getElementById('qk-apply-btn');
+
+    if (selectAllBtn) {
+        selectAllBtn.onclick = () => {
+            if (qkSelectedIndices.size === qkCandidates.length) {
+                qkSelectedIndices.clear();
+            } else {
+                qkCandidates.forEach((_, idx) => qkSelectedIndices.add(idx));
+            }
+            renderQKList();
+        };
+    }
+
+    if (applyBtn) {
+        applyBtn.onclick = async () => {
+            if (qkSelectedIndices.size === 0) {
+                alert("אנא בחר לפחות פסוק אחד לתיקון.");
+                return;
+            }
+
+            const fixes = Array.from(qkSelectedIndices).map(idx => ({
+                candidate: qkCandidates[idx],
+                choice: qkSelectedOptions[idx]
+            }));
+
+            try {
+                const response = await fetch('/apply_fixes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fixes)
+                });
+                
+                if (response.ok) {
+                    alert("התיקונים בוצעו ונשמרו בהצלחה במאגר!");
+                    // Reload list
+                    renderQereKetivView();
+                } else {
+                    alert("שגיאה בביצוע התיקונים בשרת.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("הבקשה נכשלה. ודא שהשרת המקומי פועל.");
+            }
+        };
+    }
+}
+
+// Global functions for inline DOM event handler attributes
+window.toggleQKSelection = function(idx) {
+    if (qkSelectedIndices.has(idx)) {
+        qkSelectedIndices.delete(idx);
+    } else {
+        qkSelectedIndices.add(idx);
+    }
+    renderQKList();
+};
+
+window.setQKOption = function(idx, opt) {
+    qkSelectedOptions[idx] = opt;
+    renderQKList();
+};

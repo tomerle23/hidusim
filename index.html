@@ -40,8 +40,14 @@
                 <button class="nav-link" data-target="library-view">
                     <i class="fa-solid fa-bookmark"></i> הספרייה שלי
                 </button>
+                <button class="nav-link admin-only" data-target="qere-ketiv-view" id="nav-qere-ketiv" style="display: none;">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> תיקון קרי וכתיב
+                </button>
                 <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none;">
                     <i class="fa-solid fa-clipboard-check"></i> ניהול בקשות <span class="badge" id="pending-requests-badge" style="display: none; background: #e53e3e; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-right: 0.25rem;">0</span>
+                </button>
+                <button class="nav-link admin-only" data-target="admin-verse-view" id="nav-admin-verse" style="display: none;">
+                    <i class="fa-solid fa-book-open-reader"></i> ניהול פסוקים
                 </button>
             </nav>
             
@@ -312,9 +318,23 @@
                     </div>
 
                     <div class="calc-matches-section" id="word-matches-section" style="display: none;">
-                        <h3><i class="fa-solid fa-list-ol"></i> פסוקים שנמצאו בהם חזרות (<span id="word-matches-count">0</span>)</h3>
+                        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                            <h3 style="margin: 0;"><i class="fa-solid fa-list-ol"></i> פסוקים שנמצאו בהם חזרות (<span id="word-matches-count">0</span>)</h3>
+                        </div>
+                        <div style="margin-bottom: 0.75rem; font-size: 1.1rem; color: var(--text-muted); font-weight: normal;">
+                            ביטוי חוזר: "<span id="word-search-query-display" style="font-weight: bold; color: var(--accent-gold);"></span>"
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label for="word-frequency-filter" style="font-size: 0.95rem; color: var(--text-muted); white-space: nowrap;"><i class="fa-solid fa-filter"></i> סנן לפי מילה שמופיעה:</label>
+                                <select id="word-frequency-filter" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.3rem 0.6rem; border-radius: var(--border-radius-sm); font-family: var(--font-sans); cursor: pointer; outline: none;">
+                                    <option value="all">כל המילים</option>
+                                </select>
+                                <span id="word-frequency-filter-label" style="font-size: 0.9rem; color: var(--text-muted);"></span>
+                            </div>
+                        </div>
                         <!-- Simple list style for verses instead of grid cards -->
-                        <div id="word-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; text-align: right; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.7;">
+                        <div id="word-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; text-align: right; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.7;">
                             <!-- Matched verses will render here -->
                         </div>
                     </div>
@@ -413,6 +433,32 @@
                 </div>
             </section>
 
+            <!-- VIEW 9: QERE KETIV CORRECTIONS VIEW -->
+            <section id="qere-ketiv-view" class="page-view">
+                <div class="gematria-calc-container" style="max-width: 1100px;">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> תיקון שגיאות קרי וכתיב</h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">אשר או בחר את תיקון השגיאות שנמצאו במאגר בעקבות כפילויות קרי וכתיב (למשל לאלאלו)</p>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 1rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-gold); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <div style="font-size: 1.1rem;">
+                            שגיאות במאגר: <strong id="qk-total-count" style="color: var(--accent-gold); font-size: 1.2rem;">0</strong> |
+                            נבחרו לתיקון: <strong id="qk-selected-count" style="color: var(--success); font-size: 1.2rem;">0</strong>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="button" class="secondary-btn" id="qk-select-all-btn" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;"><i class="fa-solid fa-square-check"></i> בחר הכל</button>
+                            <button type="button" class="primary-btn" id="qk-apply-btn" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> בצע תיקון לפריטים שנבחרו</button>
+                        </div>
+                    </div>
+
+                    <div id="qk-verses-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="empty-state">
+                            <div class="empty-state-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                            <p>טוען רשימת שגיאות מתוך קובץ corrupted_verses.json...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- VIEW 7: ADMIN REQUESTS PANEL -->
             <section id="admin-requests-view" class="page-view">
                 <div class="editor-container" style="max-width: 900px;">
@@ -421,6 +467,38 @@
                     
                     <div id="admin-requests-list" class="admin-requests-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
                         <!-- Pending requests will render here dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 8: ADMIN VERSE MANAGEMENT -->
+            <section id="admin-verse-view" class="page-view">
+                <div class="gematria-calc-container" style="max-width: 1100px;">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-book-open-reader"></i> ניהול פסוקים</h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">עיין, ערוך ושמור פסוקים מתוך מאגר התנ"ך לפי ספר ופרק</p>
+
+                    <!-- Book / Chapter Selectors -->
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; justify-content: center; align-items: center;">
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            <label for="av-book-select" style="font-size: 0.9rem; color: var(--text-muted);">ספר</label>
+                            <select id="av-book-select" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1.1rem; cursor: pointer; outline: none; min-width: 160px;">
+                                <option value="">-- בחר ספר --</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            <label for="av-chapter-select" style="font-size: 0.9rem; color: var(--text-muted);">פרק</label>
+                            <select id="av-chapter-select" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1.1rem; cursor: pointer; outline: none; min-width: 100px;" disabled>
+                                <option value="">-- בחר פרק --</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <button id="av-load-btn" class="primary-btn" style="padding: 0.5rem 1.5rem;" disabled><i class="fa-solid fa-magnifying-glass"></i> טען פסוקים</button>
+                        </div>
+                    </div>
+
+                    <!-- Verses list container -->
+                    <div id="admin-verse-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Verse rows rendered dynamically -->
                     </div>
                 </div>
             </section>
