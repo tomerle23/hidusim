@@ -262,10 +262,57 @@ const SefariaBookMap = {
     "יהושע": "Joshua", "שופטים": "Judges", "שמואל א": "I Samuel", "שמואל ב": "II Samuel", "מלכים א": "I Kings", "מלכים ב": "II Kings",
     "ישעיהו": "Isaiah", "ירמיהו": "Jeremiah", "יחזקאל": "Ezekiel", "הושע": "Hosea", "יואל": "Joel", "עמוס": "Amos",
     "עובדיה": "Obadiah", "יונה": "Jonah", "מיכה": "Micah", "נחום": "Nahum", "חבקוק": "Habakkuk", "צפניה": "Zephaniah",
-    "חגי": "Haggai", "זכריה": "Zechariah", "מלאכי": "Malachi", "תהילים": "Psalms", "תהלים": "Psalms", "משלי": "Proverbs", "איוב": "Job",
+    "חגי": "Haggai", "זכריה": "Zechariah", "מלאכי": "Malachi", "תהלים": "Psalms", "תהילים": "Psalms", "משלי": "Proverbs", "איוב": "Job",
     "שיר השירים": "Song of Songs", "רות": "Ruth", "איכה": "Lamentations", "קהלת": "Ecclesiastes", "אסתר": "Esther",
     "דניאל": "Daniel", "עזרא": "Ezra", "נחמיה": "Nehemiah", "דברי הימים א": "I Chronicles", "דברי הימים ב": "II Chronicles"
 };
+
+const TorahBooks = ["בראשית", "שמות", "ויקרא", "במדבר", "דברים"];
+const NachBooks = ["יהושע", "שופטים", "שמואל א", "שמואל ב", "מלכים א", "מלכים ב", "ישעיהו", "ירמיהו", "יחזקאל", "הושע", "יואל", "עמוס", "עובדיה", "יונה", "מיכה", "נחום", "חבקוק", "צפניה", "חגי", "זכריה", "מלאכי", "תהלים", "משלי", "איוב", "שיר השירים", "רות", "איכה", "קהלת", "אסתר", "דניאל", "עזרא", "נחמיה", "דברי הימים א", "דברי הימים ב"];
+
+function updateStudyToolbar(category) {
+    const bookSelect = document.getElementById('study-book-select');
+    const chapSelect = document.getElementById('study-chapter-select');
+    if (!bookSelect || !chapSelect) return;
+
+    bookSelect.innerHTML = '<option value="all">כל הספרים</option>';
+    chapSelect.innerHTML = '<option value="all">כל הפרקים</option>';
+    
+    let booksToLoad = [];
+    if (category === 'תורה') booksToLoad = TorahBooks;
+    else if (category === 'נך' || category === 'נ"ך') booksToLoad = NachBooks;
+    else if (category === 'all') booksToLoad = [...TorahBooks, ...NachBooks];
+    
+    if (booksToLoad.length > 0) {
+        booksToLoad.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            opt.innerText = b;
+            bookSelect.appendChild(opt);
+        });
+        document.getElementById('book-chapter-toolbar').style.display = 'flex';
+    } else {
+        document.getElementById('book-chapter-toolbar').style.display = 'none';
+    }
+}
+
+function updateChapterDropdown(bookHeb) {
+    const chapSelect = document.getElementById('study-chapter-select');
+    if (!chapSelect) return;
+    chapSelect.innerHTML = '<option value="all">כל הפרקים</option>';
+    if (bookHeb === 'all' || !State.tanakhVerses) return;
+    
+    const versesInBook = State.tanakhVerses.filter(v => v.bookHeb === bookHeb);
+    if (versesInBook.length === 0) return;
+    
+    const maxChap = Math.max(...versesInBook.map(v => v.chapter));
+    for (let i = 1; i <= maxChap; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = "פרק " + numberToHebrew(i);
+        chapSelect.appendChild(opt);
+    }
+}
 
 // --- Helpers for dynamic Torah/Tanakh book name resolution ---
 function getTorahBookOfParasha(parashaName) {
@@ -984,6 +1031,61 @@ function loadStaticFallback() {
     updateStats();
 }
 
+// --- Helper to create a card element ---
+function createInsightCard(insight, fallbackBook, fallbackChapter, fallbackVerse) {
+    const card = document.createElement('div');
+    card.className = 'insight-card';
+    card.addEventListener('click', () => openInsightReader(insight.id));
+    
+    const votes = State.upvotes[insight.id] || 0;
+    const commentCount = State.comments[insight.id] ? State.comments[insight.id].length : 0;
+    
+    let snippetText = insight.interpretations.peshat || insight.generalInsights || "";
+    if (snippetText.length > 150) snippetText = snippetText.substring(0, 150) + "...";
+    
+    const resolvedBook = resolveBookName(insight.parasha) || fallbackBook || "דברים";
+    const vNum = insight.verseNum || fallbackVerse;
+    const cNum = insight.chapter || fallbackChapter;
+    const headingTitle = vNum ? `${resolvedBook} פרק ${numberToHebrew(cNum || 1)}, פסוק ${numberToHebrew(vNum)}` : insight.verseText;
+    const sourceLabel = insight.category || "חידוש";
+    
+    let adminControlsHtml = "";
+    if (State.userRole === 'admin') {
+        adminControlsHtml = `
+            <div class="card-admin-controls">
+                <button class="card-admin-btn admin-edit-btn" data-id="${insight.id}"><i class="fa-solid fa-pen-to-square"></i> ערוך</button>
+                <button class="card-admin-btn admin-split-btn" data-id="${insight.id}"><i class="fa-solid fa-arrows-split-up-and-left"></i> פצל</button>
+                <button class="card-admin-btn admin-delete-btn" style="color: #e53e3e;" data-id="${insight.id}"><i class="fa-solid fa-trash"></i> מחק</button>
+            </div>
+        `;
+    }
+
+    card.innerHTML = `
+        <div class="card-header">
+            <span class="card-category">${insight.category}</span>
+            <span class="card-date">${sourceLabel}</span>
+        </div>
+        <h3 class="card-title">${headingTitle}</h3>
+        <div class="card-verse">${insight.verseText}</div>
+        <p class="card-snippet">${snippetText}</p>
+        <div class="card-footer">
+            <span class="card-author"><i class="fa-regular fa-user"></i> ${insight.author}</span>
+            <div class="card-stats">
+                <span class="stat-item"><i class="fa-solid fa-hands-clapping"></i> ${votes}</span>
+                <span class="stat-item"><i class="fa-regular fa-comment"></i> ${commentCount}</span>
+            </div>
+        </div>
+        ${adminControlsHtml}
+    `;
+
+    if (State.userRole === 'admin') {
+        card.querySelector('.admin-edit-btn').addEventListener('click', e => { e.stopPropagation(); openAdvancedEditModal(insight.id); });
+        card.querySelector('.admin-split-btn').addEventListener('click', e => { e.stopPropagation(); openSplitCommentaryModal(insight.id); });
+        card.querySelector('.admin-delete-btn').addEventListener('click', e => { e.stopPropagation(); deleteCommentary(insight.id); });
+    }
+    return card;
+}
+
 // --- View 1: Render Insights Grid (Study Hall Feed) ---
 function renderInsightsGrid() {
     const grid = document.getElementById('insights-grid');
@@ -992,30 +1094,120 @@ function renderInsightsGrid() {
     const searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
     const activeCategory = document.querySelector('.category-tab.active').getAttribute('data-category');
     const sortVal = document.getElementById('sort-select').value;
+    
+    const bookSelect = document.getElementById('study-book-select');
+    const chapSelect = document.getElementById('study-chapter-select');
+    const selectedBook = bookSelect && bookSelect.style.display !== 'none' ? bookSelect.value : 'all';
+    const selectedChapter = chapSelect && chapSelect.style.display !== 'none' ? chapSelect.value : 'all';
 
+    // If filtering by specific book and chapter, show verses in order
+    if (selectedBook !== 'all' && selectedChapter !== 'all') {
+        const cNum = parseInt(selectedChapter);
+        const verses = State.tanakhVerses.filter(v => v.bookHeb === selectedBook && v.chapter === cNum);
+        
+        if (verses.length === 0) {
+            grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><p>לא נמצאו פסוקים.</p></div>`;
+            return;
+        }
+
+        // Get insights for this chapter
+        const chapterInsights = State.insights.filter(insight => {
+            let parsed = parseHebrewReference(insight.verseText);
+            if (!parsed) {
+                const rb = resolveBookName(insight.parasha);
+                if (rb) parsed = { bookHeb: rb, chapter: insight.chapter || 1, verse: insight.verseNum || 1 };
+            }
+            if (parsed) return parsed.bookHeb === selectedBook && parsed.chapter === cNum;
+            return false;
+        });
+        
+        // Group by verse number
+        const insightsByVerse = {};
+        chapterInsights.forEach(insight => {
+            let vNum = 1;
+            let parsed = parseHebrewReference(insight.verseText);
+            if (parsed) vNum = parsed.verse;
+            else if (insight.verseNum) vNum = isNaN(insight.verseNum) ? calculateGematria(insight.verseNum) : parseInt(insight.verseNum);
+            
+            if (!insightsByVerse[vNum]) insightsByVerse[vNum] = [];
+            insightsByVerse[vNum].push(insight);
+        });
+
+        const versesWithInsights = [];
+        const versesWithoutInsights = [];
+        verses.sort((a, b) => a.verse - b.verse);
+
+        verses.forEach(v => {
+            if (insightsByVerse[v.verse] && insightsByVerse[v.verse].length > 0) {
+                versesWithInsights.push({ verse: v, insights: insightsByVerse[v.verse] });
+            } else {
+                versesWithoutInsights.push(v);
+            }
+        });
+
+        // 1. Render verses WITH insights
+        versesWithInsights.forEach(item => {
+            item.insights.forEach(insight => {
+                grid.appendChild(createInsightCard(insight, item.verse.bookHeb, item.verse.chapter, item.verse.verse));
+            });
+        });
+
+        // 2. Render verses WITHOUT insights (faded)
+        versesWithoutInsights.forEach(v => {
+            const card = document.createElement('div');
+            card.className = 'insight-card';
+            card.style.opacity = '0.55';
+            card.style.background = 'rgba(0,0,0,0.02)';
+            card.style.cursor = 'pointer';
+            
+            card.addEventListener('click', () => {
+                document.getElementById('edit-verse').value = `${v.bookHeb} ${numberToHebrew(v.chapter)}, ${numberToHebrew(v.verse)}`;
+                document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
+                switchView('scribe-desk-view');
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    if (link.getAttribute('data-target') === 'scribe-desk-view') link.classList.add('active');
+                    else link.classList.remove('active');
+                });
+            });
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-category">פסוק ללא חידוש</span>
+                    <span class="card-date">${v.bookHeb}</span>
+                </div>
+                <h3 class="card-title">${v.bookHeb} פרק ${numberToHebrew(v.chapter)}, פסוק ${numberToHebrew(v.verse)}</h3>
+                <div class="card-verse" style="font-size: 1.25rem;">${v.originalText}</div>
+                <p class="card-snippet" style="font-style: italic; color: var(--text-muted); text-align: center; margin-top: 1rem;"><i class="fa-solid fa-pen-fancy"></i> לחץ כאן כדי להיות הראשון שמוסיף חידוש על פסוק זה!</p>
+            `;
+            grid.appendChild(card);
+        });
+
+        return;
+    }
+
+    // Default Insights Feed (no specific chapter selected)
     const searchRef = parseSearchQueryReference(searchQuery);
 
     let filtered = State.insights.filter(insight => {
-        // Reference search filter (e.g. "דברים ג" or "דברים ג, כג")
+        if (selectedBook !== 'all') {
+            let parsed = parseHebrewReference(insight.verseText);
+            if (!parsed) {
+                const rb = resolveBookName(insight.parasha);
+                if (rb) parsed = { bookHeb: rb };
+            }
+            if (parsed && parsed.bookHeb !== selectedBook) return false;
+        }
+
         if (searchRef) {
             let parsed = parseHebrewReference(insight.verseText);
             if (!parsed) {
                 const resolvedBook = resolveBookName(insight.parasha);
                 if (resolvedBook) {
-                    parsed = {
-                        bookHeb: resolvedBook,
-                        chapter: insight.chapter || 1,
-                        verse: insight.verseNum ? calculateGematria(insight.verseNum) : 1
-                    };
+                    parsed = { bookHeb: resolvedBook, chapter: insight.chapter || 1, verse: insight.verseNum || 1 };
                 } else if (insight.verseNum) {
-                    parsed = {
-                        bookHeb: "דברים",
-                        chapter: insight.chapter || 3,
-                        verse: calculateGematria(insight.verseNum)
-                    };
+                    parsed = { bookHeb: "דברים", chapter: insight.chapter || 3, verse: insight.verseNum };
                 }
             }
-            
             if (parsed) {
                 const bookMatch = parsed.bookHeb === searchRef.bookHeb;
                 const chapMatch = searchRef.chapter === null || parsed.chapter === searchRef.chapter;
@@ -1024,7 +1216,6 @@ function renderInsightsGrid() {
             }
         }
 
-        // Fallback or normal text search
         const matchSearch = 
             (insight.verseText && insight.verseText.toLowerCase().includes(searchQuery)) ||
             (insight.generalInsights && insight.generalInsights.toLowerCase().includes(searchQuery)) ||
@@ -1035,36 +1226,21 @@ function renderInsightsGrid() {
         return matchSearch;
     });
 
-    // Category filter
     filtered = filtered.filter(insight => {
-        let matchCategory = true;
-        if (activeCategory !== 'all') {
-            if (activeCategory === 'נך') {
-                matchCategory = insight.category === 'נ"ך' || insight.category === 'נך' || insight.category === 'נביאים' || insight.category === 'כתובים';
-            } else {
-                matchCategory = insight.category === activeCategory;
-            }
-        }
-        return matchCategory;
+        if (activeCategory === 'all') return true;
+        if (activeCategory === 'נך') return insight.category === 'נ"ך' || insight.category === 'נך' || insight.category === 'נביאים' || insight.category === 'כתובים';
+        return insight.category === activeCategory;
     });
 
-    // Sort
     if (sortVal === 'newest') {
-        // Default loading order, user written insights first
         filtered.sort((a, b) => {
             if (a.id.startsWith('user_') && !b.id.startsWith('user_')) return -1;
             if (!a.id.startsWith('user_') && b.id.startsWith('user_')) return 1;
             return 0;
         });
     } else if (sortVal === 'popular') {
-        // Sort by upvotes count
-        filtered.sort((a, b) => {
-            const votesA = State.upvotes[a.id] || 0;
-            const votesB = State.upvotes[b.id] || 0;
-            return votesB - votesA;
-        });
+        filtered.sort((a, b) => (State.upvotes[b.id] || 0) - (State.upvotes[a.id] || 0));
     } else if (sortVal === 'length') {
-        // Sort by content character count
         filtered.sort((a, b) => {
             const lenA = (a.interpretations.peshat || "").length + (a.generalInsights || "").length;
             const lenB = (b.interpretations.peshat || "").length + (b.generalInsights || "").length;
@@ -1084,71 +1260,7 @@ function renderInsightsGrid() {
     }
 
     filtered.forEach(insight => {
-        const card = document.createElement('div');
-        card.className = 'insight-card';
-        card.addEventListener('click', () => openInsightReader(insight.id));
-        
-        const votes = State.upvotes[insight.id] || 0;
-        const commentCount = State.comments[insight.id] ? State.comments[insight.id].length : 0;
-        
-        let snippetText = insight.interpretations.peshat || insight.generalInsights || "";
-        if (snippetText.length > 150) {
-            snippetText = snippetText.substring(0, 150) + "...";
-        }
-        
-        const headingTitle = insight.verseNum ? `פסוק ${insight.verseNum}` : insight.verseText;
-        const resolvedBook = resolveBookName(insight.parasha) || "דברים";
-        const sourceLabel = insight.verseNum ? `${insight.parasha} (${resolvedBook})` : (insight.category || "חידוש");
-        
-        let adminControlsHtml = "";
-        if (State.userRole === 'admin') {
-            adminControlsHtml = `
-                <div class="card-admin-controls">
-                    <button class="card-admin-btn admin-edit-btn" data-id="${insight.id}"><i class="fa-solid fa-pen-to-square"></i> ערוך</button>
-                    <button class="card-admin-btn admin-split-btn" data-id="${insight.id}"><i class="fa-solid fa-arrows-split-up-and-left"></i> פצל</button>
-                    <button class="card-admin-btn admin-delete-btn" style="color: #e53e3e;" data-id="${insight.id}"><i class="fa-solid fa-trash"></i> מחק</button>
-                </div>
-            `;
-        }
-
-        card.innerHTML = `
-            <div class="card-header">
-                <span class="card-category">${insight.category}</span>
-                <span class="card-date">${sourceLabel}</span>
-            </div>
-            <h3 class="card-title">${headingTitle}</h3>
-            <div class="card-verse">${insight.verseText}</div>
-            <p class="card-snippet">${snippetText}</p>
-            <div class="card-footer">
-                <span class="card-author"><i class="fa-regular fa-user"></i> ${insight.author}</span>
-                <div class="card-stats">
-                    <span class="stat-item"><i class="fa-solid fa-hands-clapping"></i> ${votes}</span>
-                    <span class="stat-item"><i class="fa-regular fa-comment"></i> ${commentCount}</span>
-                </div>
-            </div>
-            ${adminControlsHtml}
-        `;
-
-        if (State.userRole === 'admin') {
-            const editBtn = card.querySelector('.admin-edit-btn');
-            const splitBtn = card.querySelector('.admin-split-btn');
-            const deleteBtn = card.querySelector('.admin-delete-btn');
-
-            editBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openAdvancedEditModal(insight.id);
-            });
-            splitBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openSplitCommentaryModal(insight.id);
-            });
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteCommentary(insight.id);
-            });
-        }
-
-        grid.appendChild(card);
+        grid.appendChild(createInsightCard(insight));
     });
 }
 
@@ -1165,9 +1277,27 @@ function initFilterControls() {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
+            updateStudyToolbar(tab.getAttribute('data-category'));
             renderInsightsGrid();
         });
     });
+    
+    // Initial setup of toolbar
+    updateStudyToolbar('all');
+    
+    const bookSelect = document.getElementById('study-book-select');
+    const chapSelect = document.getElementById('study-chapter-select');
+    if (bookSelect) {
+        bookSelect.addEventListener('change', (e) => {
+            updateChapterDropdown(e.target.value);
+            renderInsightsGrid();
+        });
+    }
+    if (chapSelect) {
+        chapSelect.addEventListener('change', () => {
+            renderInsightsGrid();
+        });
+    }
 }
 
 // --- View 2: Render Reader View (Insight Detail) ---
@@ -1180,23 +1310,30 @@ function openInsightReader(id) {
 
     // Populate metadata
     document.getElementById('reader-category').innerText = insight.category;
-    document.getElementById('reader-title').innerText = insight.verseNum ? `ביאור לפסוק ${insight.verseNum}` : insight.verseText;
+    
+    let parsedVerse = parseHebrewReference(insight.verseText);
+    let vNumDisplay = insight.verseNum;
+    if (vNumDisplay && !isNaN(vNumDisplay)) vNumDisplay = numberToHebrew(parseInt(vNumDisplay));
+    else if (parsedVerse) vNumDisplay = numberToHebrew(parsedVerse.verse);
+
+    document.getElementById('reader-title').innerText = vNumDisplay ? `ביאור לפסוק ${vNumDisplay}` : insight.verseText;
     document.getElementById('reader-author').innerText = insight.author;
     document.getElementById('reader-parasha').innerText = insight.parasha || "כללי";
 
     // Populate scripture block
     document.getElementById('reader-verse-text').innerText = insight.verseText;
-    if (insight.verseNum) {
-        const bookNameHeb = resolveBookName(insight.parasha) || "דברים";
+    if (insight.verseNum || parsedVerse) {
+        const bookNameHeb = resolveBookName(insight.parasha) || (parsedVerse ? parsedVerse.bookHeb : "דברים");
         const isTorah = ["בראשית", "שמות", "ויקרא", "במדבר", "דברים"].includes(bookNameHeb);
         const prefixWord = isTorah ? "חומש" : "ספר";
         const parashaPart = (insight.parasha && insight.parasha !== bookNameHeb && !insight.parasha.startsWith("פרשה חיצונית")) ? `, פרשת ${insight.parasha}` : "";
-        const chapterNumHeb = numberToHebrew(insight.chapter);
-        document.getElementById('reader-verse-source').innerText = `${prefixWord} ${bookNameHeb}${parashaPart}, פרק ${chapterNumHeb} פסוק ${insight.verseNum}`;
+        const cNum = insight.chapter || (parsedVerse ? parsedVerse.chapter : 1);
+        const chapterNumHeb = numberToHebrew(cNum);
+        document.getElementById('reader-verse-source').innerText = `${prefixWord} ${bookNameHeb}${parashaPart}, פרק ${chapterNumHeb} פסוק ${vNumDisplay}`;
         document.getElementById('reader-verse-block').style.display = 'block';
         
         // Dynamically fetch vocalized Tanakh text from Sefaria API
-        const refStr = `${bookNameHeb} ${insight.chapter}, ${insight.verseNum}`;
+        const refStr = `${bookNameHeb} ${cNum}, ${insight.verseNum || parsedVerse.verse}`;
         const verseTextElement = document.getElementById('reader-verse-text');
         
         fetchTanakhVerse(refStr).then(vocalizedText => {
@@ -1226,6 +1363,9 @@ function openInsightReader(id) {
 
     // Populate inline commentaries sequentially
     populateInlineCommentaries(insight);
+
+    // Auto Analysis
+    runAutoAnalysis(insight.verseText, 'reader-auto-analysis-box');
 
     // Gematria
     const gemBox = document.getElementById('reader-gematria-box');
@@ -1559,11 +1699,17 @@ function initScribeDesk() {
         }
         
         vocalizedSpan.innerText = "טוען פסוק מנוקד מהאינטרנט...";
+        const autoBox = document.getElementById('scribe-auto-analysis-box');
+        if (autoBox) autoBox.style.display = 'none';
+        
         fetchTanakhVerse(val).then(vocalized => {
             if (vocalized) {
                 vocalizedSpan.innerHTML = vocalized;
                 // Save it in the dataset for later use
                 verseInput.dataset.vocalized = vocalized;
+                
+                // Run auto analysis on the fetched text
+                runAutoAnalysis(vocalized, 'scribe-auto-analysis-box');
             } else {
                 vocalizedSpan.innerText = "לא נמצא פסוק תואם. הקלד למשל: דברים ג, כג";
                 delete verseInput.dataset.vocalized;
@@ -2705,7 +2851,9 @@ function renderLibrary() {
             }
             statusBadge = `<span class="library-item-status ${statusClass}">${statusText}</span>`;
         } else {
-            titleText = item.verseNum ? `ביאור לפסוק ${item.verseNum} (${item.parasha})` : item.verseText;
+            let vNumDisplay = item.verseNum;
+            if (vNumDisplay && !isNaN(vNumDisplay)) vNumDisplay = numberToHebrew(parseInt(vNumDisplay));
+            titleText = item.verseNum ? `ביאור לפסוק ${vNumDisplay} (${item.parasha})` : item.verseText;
             subText = item.verseNum ? item.verseText : `קטגוריה: ${item.category}`;
         }
 
@@ -3238,6 +3386,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initScribeDesk();
     initGematriaCalculator();
     initWordRepetitionCalculator();
+    initRasheiTeivot();
     initLibraryView();
     initAdminModals(); // Initialize modal handlers for Admin
     initAdminVerseManagement(); // Initialize admin verse management selectors
@@ -3615,3 +3764,316 @@ window.setQKOption = function(idx, opt) {
     qkSelectedOptions[idx] = opt;
     renderQKList();
 };
+
+// --- View 10: Rashei Teivot & Sofei Teivot Analysis ---
+function initRasheiTeivot() {
+    const input = document.getElementById('rt-input');
+    const resultsContainer = document.getElementById('rt-results');
+    if (!input || !resultsContainer) return;
+
+    // Sofit -> regular letter map
+    const sofitMap = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
+
+    function toRegularLetter(ch) {
+        return sofitMap[ch] || ch;
+    }
+
+    // Get rashei teivot (first letter of each word)
+    function getRashei(text) {
+        const clean = stripNikud(text).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
+        if (!clean) return '';
+        return clean.split(' ').map(w => {
+            if (!w) return '';
+            return w[0];
+        }).join('');
+    }
+
+    // Get sofei teivot (last letter of each word, converted to regular form)
+    function getSofei(text) {
+        const clean = stripNikud(text).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
+        if (!clean) return '';
+        return clean.split(' ').map(w => {
+            if (!w) return '';
+            const lastChar = w[w.length - 1];
+            return toRegularLetter(lastChar);
+        }).join('');
+    }
+
+    // Sort letters alphabetically for anagram comparison
+    function sortLetters(str) {
+        return str.split('').sort().join('');
+    }
+
+    // Pre-compute rashei/sofei for all tanakh verses (lazy, cached)
+    let rtCache = null;
+    function ensureCache() {
+        if (rtCache && rtCache.length === State.tanakhVerses.length) return;
+        console.time("RT Cache Build");
+        rtCache = State.tanakhVerses.map(v => {
+            const r = getRashei(v.originalText);
+            const s = getSofei(v.originalText);
+            return {
+                verse: v,
+                rashei: r,
+                sofei: s,
+                rasheiSorted: sortLetters(r),
+                sofeiSorted: sortLetters(s),
+                rasheiGematria: calculateGematria(r),
+                sofeiGematria: calculateGematria(s)
+            };
+        });
+        console.timeEnd("RT Cache Build");
+    }
+
+    // Render a verse list into a container
+    function renderVerseList(container, items, limit) {
+        container.innerHTML = '';
+        limit = limit || 50;
+        if (items.length === 0) {
+            container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>לא נמצאו פסוקים תואמים.</p></div>';
+            return;
+        }
+        if (items.length > limit) {
+            const note = document.createElement('div');
+            note.style.cssText = 'text-align: center; color: var(--accent-gold); font-weight: bold; margin-bottom: 1rem; font-size: 1.05rem;';
+            note.innerText = `נמצאו ${items.length} פסוקים. מציג את ${limit} הראשונים:`;
+            container.appendChild(note);
+        }
+        const display = items.slice(0, limit);
+        display.forEach(item => {
+            const v = item.verse || item;
+            const div = document.createElement('div');
+            div.style.cssText = 'cursor: pointer; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); transition: color 0.2s;';
+            div.addEventListener('mouseenter', () => { div.style.color = 'var(--accent-gold)'; });
+            div.addEventListener('mouseleave', () => { div.style.color = ''; });
+            div.addEventListener('click', () => {
+                document.getElementById('edit-verse').value = `${v.bookHeb} ${v.chapter}, ${v.verse}`;
+                document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
+                switchView('scribe-desk-view');
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    if (link.getAttribute('data-target') === 'scribe-desk-view') {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            });
+            const sourceLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+            // Show rashei/sofei of this verse inline
+            let extraInfo = '';
+            if (item.rashei !== undefined) {
+                extraInfo = `<span style="color: var(--text-muted); font-size: 0.9rem; margin-right: 0.5rem;">[ר"ת: ${item.rashei} | ס"ת: ${item.sofei}]</span>`;
+            }
+            div.innerHTML = `${v.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>${extraInfo}`;
+            container.appendChild(div);
+        });
+    }
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.rt-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.getAttribute('data-rt-tab');
+            document.querySelectorAll('.rt-panel').forEach(panel => {
+                panel.style.display = 'none';
+            });
+            const targetPanel = document.getElementById('rt-panel-' + target);
+            if (targetPanel) targetPanel.style.display = 'block';
+        });
+    });
+
+    // Debounce timer
+    let debounceTimer = null;
+
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const val = input.value.trim();
+            if (!val) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            const rashei = getRashei(val);
+            const sofei = getSofei(val);
+            if (!rashei && !sofei) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            resultsContainer.style.display = 'block';
+
+            // 1. Show rashei teivot + gematria
+            const rasheiGem = calculateGematria(rashei);
+            document.getElementById('rt-rashei-letters').textContent = rashei;
+            document.getElementById('rt-rashei-gematria').textContent = rasheiGem;
+
+            // 2. Show sofei teivot + gematria
+            const sofeiGem = calculateGematria(sofei);
+            document.getElementById('rt-sofei-letters').textContent = sofei;
+            document.getElementById('rt-sofei-gematria').textContent = sofeiGem;
+
+            // Build cache
+            ensureCache();
+
+            const rasheiSorted = sortLetters(rashei);
+            const sofeiSorted = sortLetters(sofei);
+
+            // 3. Exact rashei matches
+            const exactRasheiMatches = rtCache.filter(c => c.rashei === rashei);
+            renderVerseList(document.getElementById('rt-list-exact-rashei'), exactRasheiMatches);
+            updateTabCount('exact-rashei', exactRasheiMatches.length);
+
+            // 4. Exact sofei matches
+            const exactSofeiMatches = rtCache.filter(c => c.sofei === sofei);
+            renderVerseList(document.getElementById('rt-list-exact-sofei'), exactSofeiMatches);
+            updateTabCount('exact-sofei', exactSofeiMatches.length);
+
+            // 5. Anagram rashei (same letters, different order - exclude exact matches)
+            const anagramRasheiMatches = rtCache.filter(c => c.rasheiSorted === rasheiSorted && c.rashei !== rashei);
+            renderVerseList(document.getElementById('rt-list-anagram-rashei'), anagramRasheiMatches);
+            updateTabCount('anagram-rashei', anagramRasheiMatches.length);
+
+            // 6. Anagram sofei (same letters, different order - exclude exact matches)
+            const anagramSofeiMatches = rtCache.filter(c => c.sofeiSorted === sofeiSorted && c.sofei !== sofei);
+            renderVerseList(document.getElementById('rt-list-anagram-sofei'), anagramSofeiMatches);
+            updateTabCount('anagram-sofei', anagramSofeiMatches.length);
+
+            // 7. Gematria rashei matches (same gematria value, exclude those with exact same rashei)
+            const gematriaRasheiMatches = rtCache.filter(c => c.rasheiGematria === rasheiGem && c.rashei !== rashei);
+            renderVerseList(document.getElementById('rt-list-gematria-rashei'), gematriaRasheiMatches);
+            updateTabCount('gematria-rashei', gematriaRasheiMatches.length);
+
+            // 8. Gematria sofei matches (same gematria value, exclude those with exact same sofei)
+            const gemartriaSofeiMatches = rtCache.filter(c => c.sofeiGematria === sofeiGem && c.sofei !== sofei);
+            renderVerseList(document.getElementById('rt-list-gematria-sofei'), gemartriaSofeiMatches);
+            updateTabCount('gematria-sofei', gemartriaSofeiMatches.length);
+
+        }, 400); // 400ms debounce to avoid lag while typing
+    });
+
+    function updateTabCount(tabName, count) {
+        const tab = document.querySelector(`.rt-tab[data-rt-tab="${tabName}"]`);
+        if (tab) {
+            const labels = {
+                'exact-rashei': '3. ראשי תיבות זהים',
+                'exact-sofei': '4. סופי תיבות זהים',
+                'anagram-rashei': '5. אנגרמת ראשי תיבות',
+                'anagram-sofei': '6. אנגרמת סופי תיבות',
+                'gematria-rashei': '7. גימטריה ראשי תיבות',
+                'gematria-sofei': '8. גימטריה סופי תיבות'
+            };
+            tab.textContent = `${labels[tabName]} (${count})`;
+        }
+    }
+}
+
+// --- Auto Verse Analysis ---
+function runAutoAnalysis(text, containerId) {
+    const box = document.getElementById(containerId);
+    if (!box) return;
+    
+    if (!text || !State.tanakhVerses || State.tanakhVerses.length === 0) {
+        box.style.display = 'none';
+        return;
+    }
+    
+    // 1. Gematria
+    const cleanTextForGematria = stripNikud(text).replace(/[^א-ת\s]/g, "").replace(/\s+/g, " ").trim();
+    if (!cleanTextForGematria) {
+        box.style.display = 'none';
+        return;
+    }
+    const gVal = calculateGematria(text);
+    const gMatches = State.tanakhVerses.filter(v => v.gematria === gVal);
+    let gHtml = '';
+    if (gMatches.length > 1) {
+        const dMatches = gMatches.slice(0, 50);
+        gHtml = dMatches.map(v => 
+            `<div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                <strong>${v.bookHeb} ${numberToHebrew(v.chapter)}, ${numberToHebrew(v.verse)}:</strong> ${v.originalText}
+            </div>`
+        ).join('') + (gMatches.length > 50 ? `<div style="text-align:center; color:var(--text-muted); font-size:0.9rem;">...ועוד ${gMatches.length - 50} תוצאות</div>` : '');
+    } else {
+        gHtml = 'לא נמצאו פסוקים נוספים עם גימטריה זהה בכל התנ"ך.';
+    }
+    
+    // 2. Word Repetition (Singles, Pairs, Triplets, Quadruplets)
+    const cleanWords = cleanTextForGematria.split(' ').filter(w => w.length > 0);
+    let repHtml = '';
+    
+    const nGrams = [];
+    for (let n = 1; n <= 4; n++) {
+        for (let i = 0; i <= cleanWords.length - n; i++) {
+            nGrams.push(cleanWords.slice(i, i + n).join(' '));
+        }
+    }
+    
+    const uniqueGrams = [...new Set(nGrams)];
+    uniqueGrams.forEach(gram => {
+        if (gram.length < 2) return;
+        const regex = new RegExp('(^|[^א-ת])' + gram + '($|[^א-ת])');
+        const count = State.tanakhVerses.filter(v => regex.test(v.cleanText)).length;
+        if (count >= 2 && count <= 6) {
+            repHtml += `<span style="padding: 0.3rem 0.6rem; border-radius: 4px; background: #ffe3e3; border: 2px solid #ff8787; font-weight: 900; color: #c92a2a; margin: 0.2rem; display: inline-block; cursor: pointer;" title="מופיע ${count} פעמים בתנ״ך" onclick="document.querySelector('[data-target=\\'word-repetition-view\\']').click(); setTimeout(()=> { document.getElementById('word-search-input').value = '${gram}'; document.getElementById('word-search-input').dispatchEvent(new Event('input')); }, 100);">${gram} (${count})</span>`;
+        }
+    });
+    
+    // 3. RT/ST
+    function convertSofit(c) {
+        const m = {'ם':'מ', 'ן':'נ', 'ץ':'צ', 'ף':'פ', 'ך':'כ'};
+        return m[c] || c;
+    }
+    const cleanWordList = cleanWords.filter(w => w.length > 0);
+    const rt = cleanWordList.map(w => w[0]).join('');
+    const st = cleanWordList.map(w => convertSofit(w[w.length - 1])).join('');
+    
+    const rtScore = calculateGematria(rt);
+    const stScore = calculateGematria(st);
+    
+    const rtExact = State.tanakhVerses.filter(v => v.rashei === rt).length;
+    const stExact = State.tanakhVerses.filter(v => v.sofei === st).length;
+    
+    const rtAnagramMatch = rt ? State.tanakhVerses.filter(v => v.rasheiSort === rt.split('').sort().join('')).length : 0;
+    const stAnagramMatch = st ? State.tanakhVerses.filter(v => v.sofeiSort === st.split('').sort().join('')).length : 0;
+    
+    box.innerHTML = `
+        <h3 style="margin-bottom: 1rem; color: var(--accent-gold); text-align: center; font-size: 1.3rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> ניתוח אוטומטי לפסוק</h3>
+        
+        <!-- Gematria Auto -->
+        <div style="margin-bottom: 1.5rem;">
+            <h4 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-calculator"></i> גימטריה: <span style="color: var(--accent-gold);">${gVal} (${numberToHebrew(gVal)})</span></h4>
+            <div style="max-height: 200px; overflow-y: auto; background: var(--bg-secondary); padding: 1rem; border-radius: var(--border-radius-md); font-size: 0.9rem;">
+                ${gHtml}
+            </div>
+        </div>
+        
+        <!-- Repetition Auto -->
+        ${repHtml ? `
+        <div style="margin-bottom: 1.5rem;">
+            <h4 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-arrows-rotate"></i> חזרת מילים (2-6 מופעים בכל התנ"ך)</h4>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; background: var(--bg-secondary); padding: 1rem; border-radius: var(--border-radius-md);">
+                ${repHtml}
+            </div>
+        </div>
+        ` : ''}
+        
+        <!-- RT/ST Auto -->
+        <div>
+            <h4 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-spell-check"></i> ראשי וסופי תיבות</h4>
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--border-radius-md); font-size: 0.9rem;">
+                <div style="margin-bottom: 0.5rem;">
+                    <strong>ראשי תיבות:</strong> <span style="color:var(--accent-gold); font-size:1.1rem; font-weight:bold;">${rt}</span> 
+                    <span style="font-size:0.85rem; color:var(--text-muted);">(גימטריה: ${rtScore} | פסוקים זהים: ${rtExact} | אנגרמה: ${rtAnagramMatch})</span>
+                </div>
+                <div>
+                    <strong>סופי תיבות:</strong> <span style="color:var(--accent-gold); font-size:1.1rem; font-weight:bold;">${st}</span> 
+                    <span style="font-size:0.85rem; color:var(--text-muted);">(גימטריה: ${stScore} | פסוקים זהים: ${stExact} | אנגרמה: ${stAnagramMatch})</span>
+                </div>
+            </div>
+        </div>
+    `;
+    box.style.display = 'block';
+}
