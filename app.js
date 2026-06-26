@@ -834,9 +834,7 @@ function applyRoleSettings() {
     
     if (State.userRole === 'admin') {
         adminElements.forEach(el => {
-            if (el.id === 'nav-qere-ketiv') {
-                el.style.display = 'inline-block';
-            } else if (el.tagName === 'BUTTON' || el.tagName === 'NAV' || el.tagName === 'SPAN') {
+            if (el.tagName === 'BUTTON' || el.tagName === 'NAV' || el.tagName === 'SPAN') {
                 el.style.display = 'inline-block';
             } else if (el.tagName === 'DIV' || el.tagName === 'SECTION') {
                 el.style.display = 'block';
@@ -1878,31 +1876,49 @@ function initGematriaCalculator() {
                 const scoreWord = calculateGematria(word);
                 // Count how many verses in Tanakh have this exact Gematria score
                 const matchCount = State.tanakhVerses.filter(v => v.gematria === scoreWord).length;
-                
+
+                // Check if word's gematria digits are a subset of the total score's digits
+                const totalDigits = new Set(String(score).split(''));
+                const wordDigits = String(scoreWord).split('');
+                const isDigitSubset = scoreWord > 0 && wordDigits.every(d => totalDigits.has(d));
+
                 const span = document.createElement('span');
                 span.style.cursor = 'pointer';
                 span.style.padding = '0.3rem 0.6rem';
-                span.style.background = 'var(--bg-secondary)';
                 span.style.border = '1px solid var(--border-gold)';
                 span.style.borderRadius = 'var(--border-radius-sm)';
                 span.style.transition = 'all 0.2s';
                 span.style.fontSize = '1.05rem';
-                span.innerHTML = `${word} = ${scoreWord} <span style="color: var(--accent-gold); font-weight: bold;">(${matchCount})</span>`;
-                
+                span.style.position = 'relative';
+
+                if (isDigitSubset) {
+                    span.style.background = 'rgba(var(--accent-gold-rgb), 0.18)';
+                    span.style.borderColor = 'var(--accent-gold)';
+                    span.style.boxShadow = '0 0 6px rgba(var(--accent-gold-rgb), 0.35)';
+                    span.title = `ספרות ${scoreWord} כלולות בספרות ${score}`;
+                } else {
+                    span.style.background = 'var(--bg-secondary)';
+                }
+
+                const highlightBadge = isDigitSubset
+                    ? ` <span style="font-size:0.75rem; background: var(--accent-gold); color: #1a1a2e; border-radius: 4px; padding: 0.05rem 0.3rem; font-weight: bold; vertical-align: middle;">✦</span>`
+                    : '';
+                span.innerHTML = `${word} = ${scoreWord}${highlightBadge} <span style="color: var(--accent-gold); font-weight: bold;">(${matchCount})</span>`;
+
                 span.addEventListener('mouseenter', () => {
-                    span.style.background = 'rgba(var(--accent-gold-rgb), 0.1)';
+                    span.style.background = 'rgba(var(--accent-gold-rgb), 0.2)';
                     span.style.borderColor = 'var(--accent-gold)';
                 });
                 span.addEventListener('mouseleave', () => {
-                    span.style.background = 'var(--bg-secondary)';
-                    span.style.borderColor = 'var(--border-gold)';
+                    span.style.background = isDigitSubset ? 'rgba(var(--accent-gold-rgb), 0.18)' : 'var(--bg-secondary)';
+                    span.style.borderColor = isDigitSubset ? 'var(--accent-gold)' : 'var(--border-gold)';
                 });
-                
+
                 span.addEventListener('click', () => {
                     calcInput.value = word;
                     calcInput.dispatchEvent(new Event('input'));
                 });
-                
+
                 wordsList.appendChild(span);
             });
         } else {
@@ -3571,10 +3587,8 @@ function renderAdminVerseList() {
     });
 }
 
-// --- Qere/Ketiv Corrections View ---
-let qkCandidates = [];
-let qkSelectedIndices = new Set();
-let qkSelectedOptions = {}; // index -> 'ketiv' | 'qere'
+
+// --- View 10: Rashei Teivot & Sofei Teivot Analysis ---
 
 // Switch target to qere-ketiv-view inside custom navigation
 window.addEventListener('DOMContentLoaded', () => {

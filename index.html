@@ -43,9 +43,10 @@
                 <button class="nav-link" data-target="rashei-teivot-view">
                     <i class="fa-solid fa-spell-check"></i> ראשי וסופי תיבות
                 </button>
-                <button class="nav-link admin-only" data-target="qere-ketiv-view" id="nav-qere-ketiv" style="display: none;">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> תיקון קרי וכתיב
+                <button class="nav-link" data-target="verse-analysis-unified-view">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i> ניתוח פסוק
                 </button>
+
                 <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none;">
                     <i class="fa-solid fa-clipboard-check"></i> ניהול בקשות <span class="badge" id="pending-requests-badge" style="display: none; background: #e53e3e; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-right: 0.25rem;">0</span>
                 </button>
@@ -244,7 +245,6 @@
                             <label for="edit-verse">פסוק או מקור מצוטט</label>
                             <input type="text" id="edit-verse" class="editor-input" placeholder="למשל: דברים ג, כג">
                             <span id="editor-verse-vocalized" style="font-size: 0.9rem; color: var(--accent-gold); font-family: var(--font-serif); margin-top: 0.25rem; font-weight: bold; min-height: 1.25rem; display: block;"></span>
-                            <div id="scribe-auto-analysis-box" style="display: none; margin-top: 1.5rem; border: 1px solid var(--border-gold); padding: 1rem; border-radius: var(--border-radius-md); background: linear-gradient(135deg, rgba(var(--bg-primary-rgb), 1) 0%, rgba(var(--bg-secondary-rgb), 1) 100%);"></div>
                         </div>
 
                         <div class="editor-form-group">
@@ -257,6 +257,9 @@
                             <textarea id="edit-content" class="editor-textarea" placeholder="כתוב כאן בהרחבה את מהלך החידוש שלך, ביאורים, מדרשים, או פנינים רוחניות..."></textarea>
                         </div>
                     </div>
+
+                    <!-- Auto Verse Analysis Box (full-width, outside the grid) -->
+                    <div id="scribe-auto-analysis-box" style="display: none; margin-top: 1.5rem; margin-bottom: 0.5rem; border: 1px solid var(--border-gold); padding: 1.5rem; border-radius: var(--border-radius-lg); background: linear-gradient(135deg, rgba(var(--bg-primary-rgb), 1) 0%, rgba(var(--bg-secondary-rgb), 1) 100%); width: 100%;"></div>
 
                     <div class="editor-actions">
                         <button class="secondary-btn" id="preview-btn"><i class="fa-solid fa-book-open-reader"></i> תצוגה מקדימה בספר</button>
@@ -524,32 +527,115 @@
             </section>
 
             <!-- VIEW 9: QERE KETIV CORRECTIONS VIEW -->
-            <section id="qere-ketiv-view" class="page-view">
-                <div class="gematria-calc-container" style="max-width: 1100px;">
-                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> תיקון שגיאות קרי וכתיב</h2>
-                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">אשר או בחר את תיקון השגיאות שנמצאו במאגר בעקבות כפילויות קרי וכתיב (למשל לאלאלו)</p>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 1rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-gold); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-                        <div style="font-size: 1.1rem;">
-                            שגיאות במאגר: <strong id="qk-total-count" style="color: var(--accent-gold); font-size: 1.2rem;">0</strong> |
-                            נבחרו לתיקון: <strong id="qk-selected-count" style="color: var(--success); font-size: 1.2rem;">0</strong>
-                        </div>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button type="button" class="secondary-btn" id="qk-select-all-btn" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;"><i class="fa-solid fa-square-check"></i> בחר הכל</button>
-                            <button type="button" class="primary-btn" id="qk-apply-btn" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> בצע תיקון לפריטים שנבחרו</button>
-                        </div>
+
+            <!-- VIEW 10: UNIFIED VERSE ANALYSIS -->
+            <section id="verse-analysis-unified-view" class="page-view">
+                <div style="max-width: 1200px; margin: 0 auto; padding: 2rem 1rem;">
+                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.4rem;">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i> ניתוח פסוק מאוחד
+                    </h2>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">הקלד פסוק וקבל בבת אחת: גימטריה, חזרת מילים וראשי/סופי תיבות</p>
+
+                    <!-- Input -->
+                    <div class="calc-input-wrapper" style="margin-bottom: 2rem;">
+                        <textarea id="uva-input" class="calc-input" style="height: 90px; padding: 0.75rem; font-family: var(--font-serif); font-size: 1.25rem; resize: vertical;" placeholder="הדבק או הקלד פסוק שלם (למשל: בראשית ברא אלהים את השמים ואת הארץ)..."></textarea>
                     </div>
 
-                    <div id="qk-verses-list" style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div class="empty-state">
-                            <div class="empty-state-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                            <p>טוען רשימת שגיאות מתוך קובץ corrupted_verses.json...</p>
+                    <!-- Results (hidden until input) -->
+                    <div id="uva-results" style="display: none;">
+
+                        <!-- Grid of 3 columns on desktop -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; align-items: start;">
+
+                            <!-- === COLUMN 1: GEMATRIA === -->
+                            <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
+                                <h3 style="color: var(--accent-gold); margin: 0 0 1rem 0; font-size: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                                    <i class="fa-solid fa-calculator"></i> גימטריה
+                                </h3>
+                                <!-- Total value -->
+                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                                    <span style="font-size: 2.5rem; font-weight: 900; color: var(--accent-gold);" id="uva-gem-total">0</span>
+                                    <span style="color: var(--text-muted); font-size: 1rem;" id="uva-gem-heb"></span>
+                                </div>
+                                <!-- Word pills -->
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem;">ערך פר מילה <span style="background:var(--accent-gold);color:#1a1a2e;border-radius:4px;padding:0.05rem 0.3rem;font-size:0.75rem;font-weight:bold;">✦</span> = ספרות הערך הכולל</div>
+                                    <div id="uva-gem-words" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
+                                </div>
+                                <!-- Matching verses -->
+                                <div>
+                                    <div style="font-size: 0.9rem; font-weight: bold; color: var(--text-muted); margin-bottom: 0.5rem;">פסוקים באותה גימטריה: <span id="uva-gem-count" style="color:var(--accent-gold);">0</span></div>
+                                    <div id="uva-gem-matches" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                </div>
+                            </div>
+
+                            <!-- === COLUMN 2: WORD REPETITION === -->
+                            <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
+                                <h3 style="color: var(--accent-gold); margin: 0 0 1rem 0; font-size: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                                    <i class="fa-solid fa-arrows-rotate"></i> חזרת מילים
+                                </h3>
+                                <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">מילים באדום = מופעות 2–6 פעמים בתנך</div>
+                                <!-- Singles -->
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.85rem; font-weight: bold; color: var(--text-muted); margin-bottom: 0.3rem;">מילים בודדות</div>
+                                    <div id="uva-rep-words" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
+                                </div>
+                                <!-- Pairs -->
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.85rem; font-weight: bold; color: var(--text-muted); margin-bottom: 0.3rem;">צמדים</div>
+                                    <div id="uva-rep-pairs" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
+                                </div>
+                                <!-- Triplets -->
+                                <div style="margin-bottom: 0.75rem;">
+                                    <div style="font-size: 0.85rem; font-weight: bold; color: var(--text-muted); margin-bottom: 0.3rem;">שלשות</div>
+                                    <div id="uva-rep-triplets" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
+                                </div>
+                                <!-- Quads -->
+                                <div>
+                                    <div style="font-size: 0.85rem; font-weight: bold; color: var(--text-muted); margin-bottom: 0.3rem;">ריבעיות</div>
+                                    <div id="uva-rep-quads" style="display: flex; flex-wrap: wrap; gap: 0.4rem;"></div>
+                                </div>
+                            </div>
+
+                            <!-- === COLUMN 3: RASHEI / SOFEI TEIVOT === -->
+                            <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
+                                <h3 style="color: var(--accent-gold); margin: 0 0 1rem 0; font-size: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                                    <i class="fa-solid fa-spell-check"></i> ראשי וסופי תיבות
+                                </h3>
+                                <!-- Rashei -->
+                                <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem;"><i class="fa-solid fa-arrow-right"></i> ראשי תיבות</div>
+                                    <div style="display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap;">
+                                        <span id="uva-rt-rashei" style="font-size: 1.5rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
+                                        <span style="font-size: 0.9rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-rashei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
+                                    </div>
+                                </div>
+                                <!-- Sofei -->
+                                <div style="margin-bottom: 1.25rem; padding: 0.75rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem;"><i class="fa-solid fa-arrow-left"></i> סופי תיבות</div>
+                                    <div style="display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap;">
+                                        <span id="uva-rt-sofei" style="font-size: 1.5rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
+                                        <span style="font-size: 0.9rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-sofei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
+                                    </div>
+                                </div>
+                                <!-- Tabs for RT matches -->
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.75rem;">
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="exact-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">ראשי זהה <span id="uva-rt-cnt-er">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="exact-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">סופי זהה <span id="uva-rt-cnt-es">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">גימטריית ראשי <span id="uva-rt-cnt-gr">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">גימטריית סופי <span id="uva-rt-cnt-gs">(0)</span></button>
+                                </div>
+                                <div id="uva-rt-panel-exact-rashei" class="uva-rt-panel" style="display:block; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-exact-sofei" class="uva-rt-panel" style="display:none; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-gem-rashei" class="uva-rt-panel" style="display:none; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-gem-sofei" class="uva-rt-panel" style="display:none; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
             </section>
-
-            <!-- VIEW 7: ADMIN REQUESTS PANEL -->
             <section id="admin-requests-view" class="page-view">
                 <div class="editor-container" style="max-width: 900px;">
                     <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-check"></i> ניהול בקשות פרסום</h2>
