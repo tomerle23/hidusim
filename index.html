@@ -62,9 +62,14 @@
                         <option value="admin">מנהל מערכת</option>
                     </select>
                 </div>
-                <button class="theme-toggle-btn" id="theme-toggle" title="מצב לימוד לילה">
-                    <i class="fa-solid fa-moon"></i>
-                </button>
+                <div class="theme-switcher">
+                    <select id="theme-selector" class="role-select" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.4rem 0.8rem; border-radius: var(--border-radius-sm); font-family: var(--font-sans); cursor: pointer; outline: none; font-weight: 600;" title="בחר סגנון תצוגה">
+                        <option value="light">מראה קלף (יום)</option>
+                        <option value="dark">מראה לילה (חושך)</option>
+                        <option value="blue">רקע לבן וכיתוב כחול</option>
+                        <option value="high-contrast">רקע לבן וכיתוב שחור</option>
+                    </select>
+                </div>
             </div>
         </header>
 
@@ -624,6 +629,18 @@
                             </div>
 
                         </div>
+
+                        <!-- Unified Detail Panel (hidden by default) -->
+                        <div id="uva-detail-panel" style="display: none; margin-top: 3rem; padding-top: 2rem; border-top: 2px dashed var(--border-gold);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                <h3 id="uva-detail-title" style="color: var(--accent-gold); margin: 0; font-size: 1.4rem;"><i class="fa-solid fa-circle-info"></i> פירוט והרחבה לניתוח</h3>
+                                <button type="button" onclick="document.getElementById('uva-detail-panel').style.display='none';" class="secondary-btn" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;"><i class="fa-solid fa-xmark"></i> סגור תצוגה</button>
+                            </div>
+                            <div id="uva-detail-content" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem 2rem;">
+                                <!-- Dynamically loaded detail goes here -->
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </section>

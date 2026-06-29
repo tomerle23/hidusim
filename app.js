@@ -484,7 +484,7 @@ function loadLocalStorage() {
     if (theme) {
         State.theme = theme;
         document.body.setAttribute('data-theme', theme);
-        updateThemeToggleIcon();
+        updateThemeSelectorValue();
     }
 
     const role = localStorage.getItem('torah_user_role');
@@ -793,14 +793,16 @@ function initNavigation() {
         });
     }
 
-    // Theme Toggle
-    const themeToggle = document.getElementById('theme-toggle');
-    themeToggle.addEventListener('click', () => {
-        State.theme = State.theme === 'light' ? 'dark' : 'light';
-        document.body.setAttribute('data-theme', State.theme);
-        localStorage.setItem('torah_theme', State.theme);
-        updateThemeToggleIcon();
-    });
+    // Theme Selector
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.value = State.theme;
+        themeSelector.addEventListener('change', (e) => {
+            State.theme = e.target.value;
+            document.body.setAttribute('data-theme', State.theme);
+            localStorage.setItem('torah_theme', State.theme);
+        });
+    }
 
     // Back to Study Hall
     document.getElementById('back-to-hall').addEventListener('click', () => {
@@ -885,14 +887,10 @@ function renderAdminRequestsBadge() {
     }
 }
 
-function updateThemeToggleIcon() {
-    const toggleBtn = document.getElementById('theme-toggle');
-    if (State.theme === 'dark') {
-        toggleBtn.innerHTML = '<i class="fa-solid fa-sun" style="color: var(--accent-gold);"></i>';
-        toggleBtn.title = "מצב לימוד יום";
-    } else {
-        toggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-        toggleBtn.title = "מצב לימוד לילה";
+function updateThemeSelectorValue() {
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.value = State.theme;
     }
 }
 
@@ -4053,6 +4051,119 @@ function initUnifiedAnalysis() {
         });
     }
 
+    // Detail Panel Helpers
+    window.showUvaDetailVerseByCoord = function(bookHeb, chapter, verse) {
+        const v = State.tanakhVerses.find(x => x.bookHeb === bookHeb && x.chapter === chapter && x.verse === verse);
+        if (v) {
+            showUvaDetailVerse(v);
+        }
+    };
+
+    function showUvaDetailVerse(v) {
+        const panel = document.getElementById('uva-detail-panel');
+        const titleEl = document.getElementById('uva-detail-title');
+        const contentEl = document.getElementById('uva-detail-content');
+        if (!panel || !titleEl || !contentEl) return;
+
+        const sourceText = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)}`;
+        titleEl.innerHTML = `<i class="fa-solid fa-book-open"></i> פירוט לפסוק: ${sourceText}`;
+
+        const insight = findInsightByCoordinate(v.bookHeb, v.chapter, v.verse);
+        let innerHtml = `
+            <div style="font-family: var(--font-serif); font-size: 1.45rem; line-height: 1.8; text-align: center; margin-bottom: 1.5rem; padding: 1rem; border-right: 3px solid var(--border-gold); background: rgba(var(--accent-gold-rgb), 0.03); color: var(--text-primary);">
+                ${v.originalText || v.verseText}
+            </div>
+            <div style="font-size: 0.95rem; color: var(--text-muted); text-align: center; margin-bottom: 2rem;">
+                גימטריה של הפסוק: <strong style="color: var(--accent-gold); font-size: 1.1rem;">${v.gematria || calculateGematria(v.originalText)}</strong>
+            </div>
+        `;
+
+        if (insight) {
+            innerHtml += `
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <h4 style="font-size: 1.5rem; color: var(--text-primary); margin: 0;">${insight.title || 'ביאור לפסוק'}</h4>
+                        <span style="font-size: 0.9rem; color: var(--text-muted);">נכתב ע"י: <strong>${insight.author || 'מחבר'}</strong> | קטגוריה: <strong>${insight.category || 'תורה'}</strong></span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem; color: var(--text-primary);">
+                        ${insight.peshat ? `<div><strong style="color:var(--accent-gold); display:block; margin-bottom:0.25rem;">[פ] פשט:</strong><div style="font-family:var(--font-serif); font-size:1.15rem; line-height:1.7;">${insight.peshat}</div></div>` : ''}
+                        ${insight.derash ? `<div><strong style="color:var(--accent-gold); display:block; margin-bottom:0.25rem;">[ד] דרש:</strong><div style="font-family:var(--font-serif); font-size:1.15rem; line-height:1.7;">${insight.derash}</div></div>` : ''}
+                        ${insight.remez ? `<div><strong style="color:var(--accent-gold); display:block; margin-bottom:0.25rem;">[ר] רמז:</strong><div style="font-family:var(--font-serif); font-size:1.15rem; line-height:1.7;">${insight.remez}</div></div>` : ''}
+                        ${insight.sod ? `<div><strong style="color:var(--accent-gold); display:block; margin-bottom:0.25rem;">[ס] סוד:</strong><div style="font-family:var(--font-serif); font-size:1.15rem; line-height:1.7;">${insight.sod}</div></div>` : ''}
+                        ${insight.general ? `<div><strong style="color:var(--accent-gold); display:block; margin-bottom:0.25rem;">ביאור כללי:</strong><div style="font-family:var(--font-serif); font-size:1.15rem; line-height:1.7;">${insight.general}</div></div>` : ''}
+                        ${insight.toda ? `<div style="background: rgba(var(--accent-gold-rgb), 0.05); padding: 1rem; border-radius: var(--border-radius-sm); border: 1px dashed var(--border-gold);"><strong style="color:var(--accent-gold); display:block; margin-bottom:0.25rem;"><i class="fa-solid fa-scroll"></i> תודה ה':</strong><div style="font-family:var(--font-serif); font-size:1.1rem; line-height:1.6; font-style:italic;">${insight.toda}</div></div>` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            innerHtml += `
+                <div style="text-align: center; padding: 2rem 0; color: var(--text-muted);">
+                    <i class="fa-solid fa-pen-fancy" style="font-size: 2rem; color: var(--border-gold); margin-bottom: 1rem; display: block;"></i>
+                    <p style="font-size: 1.1rem; margin-bottom: 0.75rem;">לא נכתב עדיין פירוש לפסוק זה במערכת.</p>
+                    <button onclick="document.getElementById('edit-verse').value='${v.bookHeb} ${v.chapter}, ${v.verse}'; document.getElementById('edit-verse').dispatchEvent(new Event('blur')); switchView('scribe-desk-view'); document.querySelectorAll('.nav-link').forEach(link => { if (link.getAttribute('data-target')==='scribe-desk-view') link.classList.add('active'); else link.classList.remove('active'); });" class="primary-btn" style="padding: 0.5rem 1.25rem; font-size: 0.95rem;"><i class="fa-solid fa-feather"></i> כתוב חידוש לפסוק זה</button>
+                </div>
+            `;
+        }
+
+        contentEl.innerHTML = innerHtml;
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function showUvaDetailQuery(query) {
+        const panel = document.getElementById('uva-detail-panel');
+        const titleEl = document.getElementById('uva-detail-title');
+        const contentEl = document.getElementById('uva-detail-content');
+        if (!panel || !titleEl || !contentEl) return;
+
+        titleEl.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> פסוקים המכילים את הביטוי: "${query}"`;
+
+        const cleanQuery = stripNikud(query).replace(/[^א-ת\s]/g, "");
+        const regex = new RegExp('(^|[^א-ת])' + cleanQuery + '($|[^א-ת])');
+        const matches = State.tanakhVerses.filter(v => regex.test(v.cleanText));
+
+        if (matches.length === 0) {
+            contentEl.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem 0;">לא נמצאו פסוקים המכילים ביטוי זה.</div>`;
+        } else {
+            let innerHtml = `
+                <div style="font-size:0.95rem; color:var(--text-muted); margin-bottom:1rem;">
+                    נמצאו <strong>${matches.length}</strong> פסוקים המכילים את הביטוי. מציג עד 50 תוצאות (לחץ על פסוק להצגת הפירוט שלו):
+                </div>
+                <div style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:0.6rem;">
+            `;
+
+            const limit = 50;
+            const display = matches.slice(0, limit);
+            display.forEach(match => {
+                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                innerHtml += `
+                    <div class="uva-sub-verse-item" style="padding:0.5rem; border-bottom:1px solid var(--border-color); cursor:pointer; transition:all 0.2s; font-family:var(--font-serif); font-size:1.15rem; color:var(--text-primary);" onclick="showUvaDetailVerseByCoord('${match.bookHeb}', ${match.chapter}, ${match.verse})">
+                        ${match.originalText} <span style="color:var(--accent-gold); font-size:0.9rem; font-family:var(--font-sans); margin-right:0.25rem;">${sourceLabel}</span>
+                    </div>
+                `;
+            });
+
+            innerHtml += `</div>`;
+            contentEl.innerHTML = innerHtml;
+
+            // Apply hover styles dynamically for the items
+            contentEl.querySelectorAll('.uva-sub-verse-item').forEach(item => {
+                item.addEventListener('mouseenter', () => {
+                    item.style.background = 'rgba(var(--accent-gold-rgb), 0.05)';
+                    item.style.color = 'var(--accent-gold)';
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.style.background = '';
+                    item.style.color = '';
+                });
+            });
+        }
+
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth' });
+    }
+
     // Helper to render matched verses lists in RT panel
     function renderRTMatches(containerId, list) {
         const container = document.getElementById(containerId);
@@ -4076,19 +4187,7 @@ function initUnifiedAnalysis() {
             div.addEventListener('mouseenter', () => { div.style.color = 'var(--accent-gold)'; });
             div.addEventListener('mouseleave', () => { div.style.color = ''; });
             div.addEventListener('click', () => {
-                const insightMatch = findInsightByCoordinate(v.bookHeb, v.chapter, v.verse);
-                if (insightMatch) {
-                    openInsightReader(insightMatch.id);
-                    switchView('insight-reader-view');
-                } else {
-                    document.getElementById('edit-verse').value = `${v.bookHeb} ${v.chapter}, ${v.verse}`;
-                    document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
-                    switchView('scribe-desk-view');
-                    document.querySelectorAll('.nav-link').forEach(link => {
-                        if (link.getAttribute('data-target') === 'scribe-desk-view') link.classList.add('active');
-                        else link.classList.remove('active');
-                    });
-                }
+                showUvaDetailVerseByCoord(v.bookHeb, v.chapter, v.verse);
             });
             const sourceLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
             div.innerHTML = `${v.originalText} <span style="color: var(--accent-gold); font-size: 0.85rem; font-family: var(--font-sans);">${sourceLabel}</span>`;
@@ -4123,16 +4222,7 @@ function initUnifiedAnalysis() {
             
             span.innerHTML = `${gram} <span style="font-weight:bold;">(${count})</span>`;
             span.addEventListener('click', () => {
-                const repInput = document.getElementById('word-search-input');
-                if (repInput) {
-                    repInput.value = gram;
-                    repInput.dispatchEvent(new Event('input'));
-                    switchView('word-repetition-view');
-                    document.querySelectorAll('.nav-link').forEach(link => {
-                        if (link.getAttribute('data-target') === 'word-repetition-view') link.classList.add('active');
-                        else link.classList.remove('active');
-                    });
-                }
+                showUvaDetailQuery(gram);
             });
             container.appendChild(span);
         });
@@ -4160,6 +4250,7 @@ function initUnifiedAnalysis() {
             const val = input.value.trim();
             if (!val) {
                 resultsContainer.style.display = 'none';
+                document.getElementById('uva-detail-panel').style.display = 'none';
                 return;
             }
             resultsContainer.style.display = 'block';
@@ -4198,16 +4289,7 @@ function initUnifiedAnalysis() {
                     span.innerHTML = `${word} = ${scoreWord}${badge} <span style="color:var(--accent-gold); font-weight:bold;">(${matchCount})</span>`;
                     
                     span.addEventListener('click', () => {
-                        const gemInput = document.getElementById('calc-input');
-                        if (gemInput) {
-                            gemInput.value = word;
-                            gemInput.dispatchEvent(new Event('input'));
-                            switchView('gematria-view');
-                            document.querySelectorAll('.nav-link').forEach(link => {
-                                if (link.getAttribute('data-target') === 'gematria-view') link.classList.add('active');
-                                else link.classList.remove('active');
-                            });
-                        }
+                        showUvaDetailQuery(word);
                     });
                     uvaGemWords.appendChild(span);
                 });
@@ -4237,19 +4319,7 @@ function initUnifiedAnalysis() {
                     div.innerHTML = `${match.originalText} <span style="color: var(--accent-gold); font-size: 0.85rem; font-family: var(--font-sans);">${sourceLabel}</span>`;
                     
                     div.addEventListener('click', () => {
-                        const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
-                        if (insightMatch) {
-                            openInsightReader(insightMatch.id);
-                            switchView('insight-reader-view');
-                        } else {
-                            document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
-                            document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
-                            switchView('scribe-desk-view');
-                            document.querySelectorAll('.nav-link').forEach(link => {
-                                if (link.getAttribute('data-target') === 'scribe-desk-view') link.classList.add('active');
-                                else link.classList.remove('active');
-                            });
-                        }
+                        showUvaDetailVerseByCoord(match.bookHeb, match.chapter, match.verse);
                     });
                     uvaGemMatches.appendChild(div);
                 });
