@@ -2045,140 +2045,69 @@ function initWordRepetitionCalculator() {
         // Store matches for frequency filter
         searchInput._lastMatches = matches;
 
-        // Build per-word frequency map from the found verses
-        const freqMap = {}; // word -> count of verses it appears in (for this specific search)
-        // Actually for the frequency filter: count how many times the searched word appears
-        // across distinct verses, already done: matches.length is the verse count.
-        // Dropdown should allow filtering the word-matches by "word that appears N times in Tanakh"
-        // Meaning: user searches for a word -> sees 50 verses.
-        // Frequency filter: show only verses where a SPECIFIC word from the verse appears N times in whole Tanakh.
-        // Per implementation plan: populate dropdown with unique occurrence counts for individual words.
-        // Build unique counts from per-word occurrence across all tanakh:
-        // For word-search, frequency filter filters verses by how many times the searched word itself
-        // appears: so we only need counts per matching verse (all same word).
-        // Simplest: filter the verse list by occurrence count of the primary searched word.
-        // matches.length = total appearances. Allow filtering to show only if count === selected.
-        // That means: "show all verses" or "show only if total count = N".
-        // Better interpretation: filter based on match count buckets.
-        // We'll populate with the count itself (one option: the actual total), plus 'all'.
-        const freqFilter = document.getElementById('word-frequency-filter');
-        if (freqFilter) {
-            // Get unique individual word occurrence counts across all tanakh verses in result set
-            // For simplicity: build a set of unique total-count values across the display
-            const wordCountMap = {};
-            matches.forEach(v => {
-                const words = v.cleanText.split(' ').filter(w => w.length > 1);
-                words.forEach(w => {
-                    if (!wordCountMap[w]) {
-                        const r = new RegExp('(^|[^\u05d0-\u05ea])' + w + '($|[^\u05d0-\u05ea])');
-                        wordCountMap[w] = State.tanakhVerses.filter(vv => r.test(vv.cleanText)).length;
-                    }
-                });
-            });
-            const uniqueCounts = [...new Set(Object.values(wordCountMap))].sort((a,b) => a-b);
-            freqFilter.innerHTML = '<option value="all">\u05db\u05dc \u05d4\u05de\u05d9\u05dc\u05d9\u05dd</option>';
-            uniqueCounts.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c;
-                opt.textContent = `${c} \u05e4\u05e2\u05de\u05d9\u05dd`;
-                freqFilter.appendChild(opt);
-            });
-            freqFilter._wordCountMap = wordCountMap;
-            freqFilter._allMatches = matches;
+        // Render matches
+        matchesGrid.innerHTML = "";
+
+        // Show first 50 results to prevent DOM lag
+        const limit = 50;
+        const displayMatches = matches.slice(0, limit);
+
+        if (matches.length > limit) {
+            const note = document.createElement('div');
+            note.style.textAlign = 'center';
+            note.style.color = 'var(--accent-gold)';
+            note.style.fontWeight = 'bold';
+            note.style.marginBottom = '1rem';
+            note.style.fontSize = '1.1rem';
+            note.innerText = `נמצאו ${matches.length} תוצאות. מציג את 50 הראשונים:`;
+            matchesGrid.appendChild(note);
         }
 
-        // Render based on current filter
-        const renderWordMatches = (filteredMatches) => {
-            matchesGrid.innerHTML = "";
-
-            // Show first 50 results to prevent DOM lag
-            const limit = 50;
-            const displayMatches = filteredMatches.slice(0, limit);
-
-            if (filteredMatches.length > limit) {
-                const note = document.createElement('div');
-                note.style.textAlign = 'center';
-                note.style.color = 'var(--accent-gold)';
-                note.style.fontWeight = 'bold';
-                note.style.marginBottom = '1rem';
-                note.style.fontSize = '1.1rem';
-                note.innerText = `\u05e0\u05de\u05e6\u05d0\u05d5 ${filteredMatches.length} \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea. \u05de\u05e6\u05d9\u05d2 \u05d0\u05ea 50 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d5\u05ea:`;
-                matchesGrid.appendChild(note);
-            }
-
-            if (displayMatches.length > 0) {
-                displayMatches.forEach(match => {
-                    const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
-                    
-                    const item = document.createElement('div');
-                    item.className = 'word-repetition-item';
-                    item.style.cursor = 'pointer';
-                    item.style.padding = '0.5rem 0';
-                    item.style.borderBottom = '1px solid var(--border-color)';
-                    item.style.transition = 'color 0.2s';
-                    
-                    item.addEventListener('mouseenter', () => { item.style.color = 'var(--accent-gold)'; });
-                    item.addEventListener('mouseleave', () => { item.style.color = ''; });
-                    
-                    if (insightMatch) {
-                        item.addEventListener('click', () => {
-                            openInsightReader(insightMatch.id);
-                            switchView('insight-reader-view');
-                        });
-                    } else {
-                        item.addEventListener('click', () => {
-                            document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
-                            document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
-                            switchView('scribe-desk-view');
-                            
-                            document.querySelectorAll('.nav-link').forEach(link => {
-                                if (link.getAttribute('data-target') === 'scribe-desk-view') {
-                                    link.classList.add('active');
-                                } else {
-                                    link.classList.remove('active');
-                                }
-                            });
-                        });
-                    }
-                    
-                    const sourceLabel = `(${match.bookHeb} \u05e4\u05e8\u05e7 ${numberToHebrew(match.chapter)} \u05e4\u05e1\u05d5\u05e7 ${numberToHebrew(match.verse)})`;
-                    item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
-                    matchesGrid.appendChild(item);
-                });
-            } else {
-                matchesGrid.innerHTML = `
-                    <div class="empty-state" style="padding: 2rem 0;">
-                        <p>\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e4\u05e1\u05d5\u05e7\u05d9\u05dd \u05d1\u05e1\u05d9\u05e0\u05d5\u05df \u05d6\u05d4.</p>
-                    </div>
-                `;
-            }
-        };
-
-        renderWordMatches(matches);
-
-        // Wire frequency filter change
-        if (freqFilter && !freqFilter._listenerAdded) {
-            freqFilter._listenerAdded = true;
-            freqFilter.addEventListener('change', () => {
-                const val = freqFilter.value;
-                const allM = freqFilter._allMatches || [];
-                const wcMap = freqFilter._wordCountMap || {};
-                if (val === 'all') {
-                    matchesCount.innerText = allM.length;
-                    renderWordMatches(allM);
-                } else {
-                    const n = parseInt(val);
-                    const filtered = allM.filter(v => {
-                        const words = v.cleanText.split(' ').filter(w => w.length > 1);
-                        return words.some(w => wcMap[w] === n);
+        if (displayMatches.length > 0) {
+            displayMatches.forEach(match => {
+                const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
+                
+                const item = document.createElement('div');
+                item.className = 'word-repetition-item';
+                item.style.cursor = 'pointer';
+                item.style.padding = '0.5rem 0';
+                item.style.borderBottom = '1px solid var(--border-color)';
+                item.style.transition = 'color 0.2s';
+                
+                item.addEventListener('mouseenter', () => { item.style.color = 'var(--accent-gold)'; });
+                item.addEventListener('mouseleave', () => { item.style.color = ''; });
+                
+                if (insightMatch) {
+                    item.addEventListener('click', () => {
+                        openInsightReader(insightMatch.id);
+                        switchView('insight-reader-view');
                     });
-                    matchesCount.innerText = filtered.length;
-                    renderWordMatches(filtered);
+                } else {
+                    item.addEventListener('click', () => {
+                        document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
+                        document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
+                        switchView('scribe-desk-view');
+                        
+                        document.querySelectorAll('.nav-link').forEach(link => {
+                            if (link.getAttribute('data-target') === 'scribe-desk-view') {
+                                link.classList.add('active');
+                            } else {
+                                link.classList.remove('active');
+                            }
+                        });
+                    });
                 }
+                
+                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
+                matchesGrid.appendChild(item);
             });
-        } else if (freqFilter) {
-            // Update stored references even if listener was already added
-            freqFilter._allMatches = matches;
+        } else {
+            matchesGrid.innerHTML = `
+                <div class="empty-state" style="padding: 2rem 0;">
+                    <p>לא נמצאו פסוקים.</p>
+                </div>
+            `;
         }
     });
 
@@ -3403,6 +3332,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initGematriaCalculator();
     initWordRepetitionCalculator();
     initRasheiTeivot();
+    initUnifiedAnalysis();
     initLibraryView();
     initAdminModals(); // Initialize modal handlers for Admin
     initAdminVerseManagement(); // Initialize admin verse management selectors
@@ -3819,11 +3749,10 @@ function initRasheiTeivot() {
     }
 
     // Pre-compute rashei/sofei for all tanakh verses (lazy, cached)
-    let rtCache = null;
     function ensureCache() {
-        if (rtCache && rtCache.length === State.tanakhVerses.length) return;
+        if (State.rtCache && State.rtCache.length === State.tanakhVerses.length) return;
         console.time("RT Cache Build");
-        rtCache = State.tanakhVerses.map(v => {
+        State.rtCache = State.tanakhVerses.map(v => {
             const r = getRashei(v.originalText);
             const s = getSofei(v.originalText);
             return {
@@ -3936,32 +3865,32 @@ function initRasheiTeivot() {
             const sofeiSorted = sortLetters(sofei);
 
             // 3. Exact rashei matches
-            const exactRasheiMatches = rtCache.filter(c => c.rashei === rashei);
+            const exactRasheiMatches = State.rtCache.filter(c => c.rashei === rashei);
             renderVerseList(document.getElementById('rt-list-exact-rashei'), exactRasheiMatches);
             updateTabCount('exact-rashei', exactRasheiMatches.length);
 
             // 4. Exact sofei matches
-            const exactSofeiMatches = rtCache.filter(c => c.sofei === sofei);
+            const exactSofeiMatches = State.rtCache.filter(c => c.sofei === sofei);
             renderVerseList(document.getElementById('rt-list-exact-sofei'), exactSofeiMatches);
             updateTabCount('exact-sofei', exactSofeiMatches.length);
 
             // 5. Anagram rashei (same letters, different order - exclude exact matches)
-            const anagramRasheiMatches = rtCache.filter(c => c.rasheiSorted === rasheiSorted && c.rashei !== rashei);
+            const anagramRasheiMatches = State.rtCache.filter(c => c.rasheiSorted === rasheiSorted && c.rashei !== rashei);
             renderVerseList(document.getElementById('rt-list-anagram-rashei'), anagramRasheiMatches);
             updateTabCount('anagram-rashei', anagramRasheiMatches.length);
 
             // 6. Anagram sofei (same letters, different order - exclude exact matches)
-            const anagramSofeiMatches = rtCache.filter(c => c.sofeiSorted === sofeiSorted && c.sofei !== sofei);
+            const anagramSofeiMatches = State.rtCache.filter(c => c.sofeiSorted === sofeiSorted && c.sofei !== sofei);
             renderVerseList(document.getElementById('rt-list-anagram-sofei'), anagramSofeiMatches);
             updateTabCount('anagram-sofei', anagramSofeiMatches.length);
 
-            // 7. Gematria rashei matches (same gematria value, exclude those with exact same rashei)
-            const gematriaRasheiMatches = rtCache.filter(c => c.rasheiGematria === rasheiGem && c.rashei !== rashei);
+            // 7. Gematria rashei matches (same gematria value)
+            const gematriaRasheiMatches = State.rtCache.filter(c => c.rasheiGematria === rasheiGem);
             renderVerseList(document.getElementById('rt-list-gematria-rashei'), gematriaRasheiMatches);
             updateTabCount('gematria-rashei', gematriaRasheiMatches.length);
 
-            // 8. Gematria sofei matches (same gematria value, exclude those with exact same sofei)
-            const gemartriaSofeiMatches = rtCache.filter(c => c.sofeiGematria === sofeiGem && c.sofei !== sofei);
+            // 8. Gematria sofei matches (same gematria value)
+            const gemartriaSofeiMatches = State.rtCache.filter(c => c.sofeiGematria === sofeiGem);
             renderVerseList(document.getElementById('rt-list-gematria-sofei'), gemartriaSofeiMatches);
             updateTabCount('gematria-sofei', gemartriaSofeiMatches.length);
 
@@ -4091,3 +4020,309 @@ function runAutoAnalysis(text, containerId) {
     `;
     box.style.display = 'block';
 }
+
+// --- View 11: Unified Verse Analysis ---
+function initUnifiedAnalysis() {
+    const input = document.getElementById('uva-input');
+    const resultsContainer = document.getElementById('uva-results');
+    if (!input || !resultsContainer) return;
+
+    // Local RT/ST helpers
+    const sofitMap = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
+    function toRegularLetter(ch) { return sofitMap[ch] || ch; }
+    function getRasheiLocal(txt) {
+        const clean = stripNikud(txt).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
+        return clean ? clean.split(' ').map(w => w ? w[0] : '').join('') : '';
+    }
+    function getSofeiLocal(txt) {
+        const clean = stripNikud(txt).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
+        return clean ? clean.split(' ').map(w => w ? toRegularLetter(w[w.length - 1]) : '').join('') : '';
+    }
+    function ensureCacheLocal() {
+        if (State.rtCache && State.rtCache.length === State.tanakhVerses.length) return;
+        State.rtCache = State.tanakhVerses.map(v => {
+            const r = getRasheiLocal(v.originalText);
+            const s = getSofeiLocal(v.originalText);
+            return {
+                verse: v,
+                rashei: r,
+                sofei: s,
+                rasheiGematria: calculateGematria(r),
+                sofeiGematria: calculateGematria(s)
+            };
+        });
+    }
+
+    // Helper to render matched verses lists in RT panel
+    function renderRTMatches(containerId, list) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = "";
+        if (list.length === 0) {
+            container.innerHTML = `<div style="color:var(--text-muted); font-size:0.95rem; text-align:center; padding:0.5rem 0;">לא נמצאו.</div>`;
+            return;
+        }
+        const limit = 50;
+        const display = list.slice(0, limit);
+        if (list.length > limit) {
+            const note = document.createElement('div');
+            note.style.cssText = 'text-align: center; color: var(--accent-gold); font-weight: bold; margin-bottom: 0.3rem; font-size: 0.8rem;';
+            note.innerText = `מציג 50 מתוך ${list.length}:`;
+            container.appendChild(note);
+        }
+        display.forEach(item => {
+            const v = item.verse || item;
+            const div = document.createElement('div');
+            div.style.cssText = 'cursor: pointer; padding: 0.35rem 0; border-bottom: 1px solid var(--border-color); transition: color 0.2s;';
+            div.addEventListener('mouseenter', () => { div.style.color = 'var(--accent-gold)'; });
+            div.addEventListener('mouseleave', () => { div.style.color = ''; });
+            div.addEventListener('click', () => {
+                const insightMatch = findInsightByCoordinate(v.bookHeb, v.chapter, v.verse);
+                if (insightMatch) {
+                    openInsightReader(insightMatch.id);
+                    switchView('insight-reader-view');
+                } else {
+                    document.getElementById('edit-verse').value = `${v.bookHeb} ${v.chapter}, ${v.verse}`;
+                    document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
+                    switchView('scribe-desk-view');
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        if (link.getAttribute('data-target') === 'scribe-desk-view') link.classList.add('active');
+                        else link.classList.remove('active');
+                    });
+                }
+            });
+            const sourceLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+            div.innerHTML = `${v.originalText} <span style="color: var(--accent-gold); font-size: 0.85rem; font-family: var(--font-sans);">${sourceLabel}</span>`;
+            container.appendChild(div);
+        });
+    }
+
+    // Helper to generate and check word repetitions
+    function populateNgrams(containerId, list) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = "";
+        if (list.length === 0) {
+            container.innerHTML = `<span style="color: var(--text-muted); font-size: 0.9rem;">אין מספיק מילים.</span>`;
+            return;
+        }
+        list.forEach(gram => {
+            const regex = new RegExp('(^|[^א-ת])' + gram + '($|[^א-ת])');
+            const count = State.tanakhVerses.filter(v => regex.test(v.cleanText)).length;
+            
+            const span = document.createElement('span');
+            span.style.cssText = "cursor:pointer; padding:0.25rem 0.5rem; border-radius:var(--border-radius-sm); transition:all 0.2s; font-size:0.95rem; display:inline-block; margin:0.15rem;";
+            
+            if (count >= 2 && count <= 6) {
+                span.style.background = '#ffe3e3';
+                span.style.border = '2px solid #ff8787';
+                span.style.fontWeight = '900';
+                span.style.color = '#c92a2a';
+            } else {
+                span.style.background = 'var(--bg-secondary)';
+                span.style.border = '1px solid var(--border-gold)';
+            }
+            
+            span.innerHTML = `${gram} <span style="font-weight:bold;">(${count})</span>`;
+            span.addEventListener('click', () => {
+                const repInput = document.getElementById('word-search-input');
+                if (repInput) {
+                    repInput.value = gram;
+                    repInput.dispatchEvent(new Event('input'));
+                    switchView('word-repetition-view');
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        if (link.getAttribute('data-target') === 'word-repetition-view') link.classList.add('active');
+                        else link.classList.remove('active');
+                    });
+                }
+            });
+            container.appendChild(span);
+        });
+    }
+
+    // Tab switching inside RT column
+    const tabs = document.querySelectorAll('.uva-rt-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.getAttribute('data-uva-rt-tab');
+            document.querySelectorAll('.uva-rt-panel').forEach(panel => {
+                panel.style.display = 'none';
+            });
+            const targetPanel = document.getElementById('uva-rt-panel-' + target);
+            if (targetPanel) targetPanel.style.display = 'block';
+        });
+    });
+
+    let uvaDebounce = null;
+    input.addEventListener('input', () => {
+        clearTimeout(uvaDebounce);
+        uvaDebounce = setTimeout(() => {
+            const val = input.value.trim();
+            if (!val) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+            resultsContainer.style.display = 'block';
+
+            // --- 1. GEMATRIA ---
+            const score = calculateGematria(val);
+            document.getElementById('uva-gem-total').textContent = score;
+            document.getElementById('uva-gem-heb').textContent = `בגימטריה: ${numberToHebrew(score)}`;
+
+            // Word-by-word pills
+            const cleanText = stripNikud(val).replace(/[^א-ת\s]/g, "").replace(/\s+/g, " ").trim();
+            const uvaGemWords = document.getElementById('uva-gem-words');
+            uvaGemWords.innerHTML = "";
+            if (cleanText) {
+                const words = cleanText.split(' ');
+                words.forEach(word => {
+                    if (!word) return;
+                    const scoreWord = calculateGematria(word);
+                    const matchCount = State.tanakhVerses.filter(v => v.gematria === scoreWord).length;
+                    
+                    const totalDigits = new Set(String(score).split(''));
+                    const wordDigits = String(scoreWord).split('');
+                    const isDigitSubset = scoreWord > 0 && wordDigits.every(d => totalDigits.has(d));
+                    
+                    const span = document.createElement('span');
+                    span.style.cssText = "cursor:pointer; padding:0.3rem 0.6rem; border:1px solid var(--border-gold); border-radius:var(--border-radius-sm); font-size:1.05rem; transition:all 0.2s; display:inline-block; margin:0.15rem;";
+                    if (isDigitSubset) {
+                        span.style.background = 'rgba(var(--accent-gold-rgb), 0.18)';
+                        span.style.borderColor = 'var(--accent-gold)';
+                        span.style.boxShadow = '0 0 6px rgba(var(--accent-gold-rgb), 0.35)';
+                        span.title = `ספרות ${scoreWord} כלולות בספרות ${score}`;
+                    } else {
+                        span.style.background = 'var(--bg-secondary)';
+                    }
+                    const badge = isDigitSubset ? ' <span style="font-size:0.75rem; background: var(--accent-gold); color: #1a1a2e; border-radius: 4px; padding: 0.05rem 0.3rem; font-weight: bold; vertical-align: middle;">✦</span>' : '';
+                    span.innerHTML = `${word} = ${scoreWord}${badge} <span style="color:var(--accent-gold); font-weight:bold;">(${matchCount})</span>`;
+                    
+                    span.addEventListener('click', () => {
+                        const gemInput = document.getElementById('calc-input');
+                        if (gemInput) {
+                            gemInput.value = word;
+                            gemInput.dispatchEvent(new Event('input'));
+                            switchView('gematria-view');
+                            document.querySelectorAll('.nav-link').forEach(link => {
+                                if (link.getAttribute('data-target') === 'gematria-view') link.classList.add('active');
+                                else link.classList.remove('active');
+                            });
+                        }
+                    });
+                    uvaGemWords.appendChild(span);
+                });
+            }
+
+            // Matching verses
+            const uvaGemMatches = document.getElementById('uva-gem-matches');
+            uvaGemMatches.innerHTML = "";
+            const gemMatches = State.tanakhVerses.filter(v => v.gematria === score);
+            document.getElementById('uva-gem-count').textContent = gemMatches.length;
+            if (gemMatches.length > 0) {
+                const limit = 50;
+                const displayMatches = gemMatches.slice(0, limit);
+                if (gemMatches.length > limit) {
+                    const note = document.createElement('div');
+                    note.style.cssText = 'text-align: center; color: var(--accent-gold); font-weight: bold; margin-bottom: 0.5rem; font-size: 0.85rem;';
+                    note.innerText = `מציג 50 מתוך ${gemMatches.length}:`;
+                    uvaGemMatches.appendChild(note);
+                }
+                displayMatches.forEach(match => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding: 0.4rem 0; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: color 0.2s;';
+                    div.addEventListener('mouseenter', () => { div.style.color = 'var(--accent-gold)'; });
+                    div.addEventListener('mouseleave', () => { div.style.color = ''; });
+                    
+                    const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                    div.innerHTML = `${match.originalText} <span style="color: var(--accent-gold); font-size: 0.85rem; font-family: var(--font-sans);">${sourceLabel}</span>`;
+                    
+                    div.addEventListener('click', () => {
+                        const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
+                        if (insightMatch) {
+                            openInsightReader(insightMatch.id);
+                            switchView('insight-reader-view');
+                        } else {
+                            document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
+                            document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
+                            switchView('scribe-desk-view');
+                            document.querySelectorAll('.nav-link').forEach(link => {
+                                if (link.getAttribute('data-target') === 'scribe-desk-view') link.classList.add('active');
+                                else link.classList.remove('active');
+                            });
+                        }
+                    });
+                    uvaGemMatches.appendChild(div);
+                });
+            } else {
+                uvaGemMatches.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 0.5rem 0;">אין פסוקים זהים.</div>';
+            }
+
+            // --- 2. WORD REPETITION ---
+            if (cleanText) {
+                const words = cleanText.split(' ').filter(w => w.length > 0);
+                
+                // Singles
+                populateNgrams('uva-rep-words', words);
+
+                // Pairs
+                const pairs = [];
+                for (let i = 0; i < words.length - 1; i++) {
+                    pairs.push(words[i] + " " + words[i+1]);
+                }
+                populateNgrams('uva-rep-pairs', pairs);
+
+                // Triplets
+                const triplets = [];
+                for (let i = 0; i < words.length - 2; i++) {
+                    triplets.push(words[i] + " " + words[i+1] + " " + words[i+2]);
+                }
+                populateNgrams('uva-rep-triplets', triplets);
+
+                // Quads
+                const quads = [];
+                for (let i = 0; i < words.length - 3; i++) {
+                    quads.push(words[i] + " " + words[i+1] + " " + words[i+2] + " " + words[i+3]);
+                }
+                populateNgrams('uva-rep-quads', quads);
+            }
+
+            // --- 3. RASHEI & SOFEI TEIVOT ---
+            const rashei = getRasheiLocal(val);
+            const sofei = getSofeiLocal(val);
+
+            document.getElementById('uva-rt-rashei').textContent = rashei || '-';
+            const rasheiGem = rashei ? calculateGematria(rashei) : 0;
+            document.getElementById('uva-rt-rashei-gem').textContent = rasheiGem;
+
+            document.getElementById('uva-rt-sofei').textContent = sofei || '-';
+            const sofeiGem = sofei ? calculateGematria(sofei) : 0;
+            document.getElementById('uva-rt-sofei-gem').textContent = sofeiGem;
+
+            if (rashei || sofei) {
+                ensureCacheLocal();
+
+                // Exact Rashei
+                const exactRashei = State.rtCache.filter(c => c.rashei === rashei);
+                document.getElementById('uva-rt-cnt-er').textContent = `(${exactRashei.length})`;
+                renderRTMatches('uva-rt-panel-exact-rashei', exactRashei);
+
+                // Exact Sofei
+                const exactSofei = State.rtCache.filter(c => c.sofei === sofei);
+                document.getElementById('uva-rt-cnt-es').textContent = `(${exactSofei.length})`;
+                renderRTMatches('uva-rt-panel-exact-sofei', exactSofei);
+
+                // Gematria Rashei
+                const gemRashei = State.rtCache.filter(c => c.rasheiGematria === rasheiGem);
+                document.getElementById('uva-rt-cnt-gr').textContent = `(${gemRashei.length})`;
+                renderRTMatches('uva-rt-panel-gem-rashei', gemRashei);
+
+                // Gematria Sofei
+                const gemSofei = State.rtCache.filter(c => c.sofeiGematria === sofeiGem);
+                document.getElementById('uva-rt-cnt-gs').textContent = `(${gemSofei.length})`;
+                renderRTMatches('uva-rt-panel-gem-sofei', gemSofei);
+            }
+
+        }, 400);
+    });
+}
+
