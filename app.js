@@ -18,6 +18,15 @@ const State = {
     activeLibraryTab: 'bookmarks',
     fontSize: 18,        // Default reader font size in pixels
     theme: 'light',
+    bgTheme: 'parchment', // Separate bg selection
+    textTheme: 'espresso', // Separate text selection
+    sharedVerse: '',      // Shared text input across calculator pages
+    searchHistory: {      // Local history list
+        gematria: [],
+        wordRep: [],
+        rashei: [],
+        unified: []
+    },
     tanakhVerses: [],    // Indexed offline verses of the entire Tanakh
     userRole: 'user',    // 'user' or 'admin'
     pendingRequests: [], // Admin approval queue
@@ -480,11 +489,26 @@ function loadLocalStorage() {
         localStorage.setItem('torah_streak', State.userStreak);
     }
 
-    const theme = localStorage.getItem('torah_theme');
-    if (theme) {
-        State.theme = theme;
-        document.body.setAttribute('data-theme', theme);
-        updateThemeSelectorValue();
+    const bgTheme = localStorage.getItem('torah_bg') || 'parchment';
+    State.bgTheme = bgTheme;
+    document.body.setAttribute('data-bg', bgTheme);
+
+    const textTheme = localStorage.getItem('torah_text') || 'espresso';
+    State.textTheme = textTheme;
+    document.body.setAttribute('data-text', textTheme);
+
+    const sharedVerse = localStorage.getItem('torah_shared_verse');
+    if (sharedVerse) {
+        State.sharedVerse = sharedVerse;
+    }
+
+    const searchHistory = localStorage.getItem('torah_search_history');
+    if (searchHistory) {
+        try {
+            State.searchHistory = JSON.parse(searchHistory);
+        } catch (e) {
+            console.error("Failed to parse search history", e);
+        }
     }
 
     const role = localStorage.getItem('torah_user_role');
@@ -744,6 +768,9 @@ function initNavigation() {
             } else if (targetId === 'admin-verse-view') {
                 initAdminVerseManagement();
             }
+            
+            // Sync shared verse inputs and render panel histories
+            syncSharedVerseAndRenderHistories(targetId);
         });
     });
 
@@ -793,14 +820,24 @@ function initNavigation() {
         });
     }
 
-    // Theme Selector
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.value = State.theme;
-        themeSelector.addEventListener('change', (e) => {
-            State.theme = e.target.value;
-            document.body.setAttribute('data-theme', State.theme);
-            localStorage.setItem('torah_theme', State.theme);
+    // Theme Selectors (Split BG / Text)
+    const bgSelector = document.getElementById('bg-selector');
+    if (bgSelector) {
+        bgSelector.value = State.bgTheme;
+        bgSelector.addEventListener('change', (e) => {
+            State.bgTheme = e.target.value;
+            document.body.setAttribute('data-bg', State.bgTheme);
+            localStorage.setItem('torah_bg', State.bgTheme);
+        });
+    }
+
+    const textSelector = document.getElementById('text-selector');
+    if (textSelector) {
+        textSelector.value = State.textTheme;
+        textSelector.addEventListener('change', (e) => {
+            State.textTheme = e.target.value;
+            document.body.setAttribute('data-text', State.textTheme);
+            localStorage.setItem('torah_text', State.textTheme);
         });
     }
 
@@ -888,10 +925,10 @@ function renderAdminRequestsBadge() {
 }
 
 function updateThemeSelectorValue() {
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.value = State.theme;
-    }
+    const bgSel = document.getElementById('bg-selector');
+    if (bgSel) bgSel.value = State.bgTheme;
+    const textSel = document.getElementById('text-selector');
+    if (textSel) textSel.value = State.textTheme;
 }
 
 // --- Data Loading & Initialization ---
@@ -1839,16 +1876,37 @@ function initGematriaCalculator() {
     const wordsAnalysis = document.getElementById('gematria-words-analysis');
     const wordsList = document.getElementById('gematria-words-list');
 
+    // Close button for word detail
+    const detailClose = document.getElementById('calc-word-detail-close');
+    if (detailClose) {
+        detailClose.addEventListener('click', () => {
+            const detailSection = document.getElementById('calc-word-detail-section');
+            if (detailSection) detailSection.style.display = 'none';
+        });
+    }
+
     calcInput.addEventListener('input', () => {
         const val = calcInput.value.trim();
         saveGematriaQueryToServer(val);
+
+        // Sync shared verse
+        State.sharedVerse = val;
+        localStorage.setItem('torah_shared_verse', val);
 
         if (!val) {
             resultBox.style.display = 'none';
             matchesSection.style.display = 'none';
             wordsAnalysis.style.display = 'none';
+            const detailSection = document.getElementById('calc-word-detail-section');
+            if (detailSection) detailSection.style.display = 'none';
             return;
         }
+
+        // Add to history after typing stops
+        clearTimeout(calcInput._historyTimeout);
+        calcInput._historyTimeout = setTimeout(() => {
+            addToHistory('gematria', val);
+        }, 1000);
 
         const score = calculateGematria(val);
         if (score === 0) {
@@ -1913,8 +1971,81 @@ function initGematriaCalculator() {
                 });
 
                 span.addEventListener('click', () => {
-                    calcInput.value = word;
-                    calcInput.dispatchEvent(new Event('input'));
+                    const detailSection = document.getElementById('calc-word-detail-section');
+                    const detailWord = document.getElementById('calc-word-detail-word');
+                    const detailScore = document.getElementById('calc-word-detail-score');
+                    const detailHeb = document.getElementById('calc-word-detail-heb');
+                    const detailGrid = document.getElementById('calc-word-detail-grid');
+                    
+                    if (detailSection && detailWord && detailScore && detailHeb && detailGrid) {
+                        detailWord.innerText = word;
+                        detailScore.innerText = scoreWord;
+                        detailHeb.innerText = `בגימטריה: ${numberToHebrew(scoreWord)}`;
+                        
+                        // Find matches in Tanakh
+                        const matches = State.tanakhVerses.filter(v => v.gematria === scoreWord);
+                        detailGrid.innerHTML = "";
+                        
+                        if (matches.length > 0) {
+                            const limit = 50;
+                            const displayMatches = matches.slice(0, limit);
+                            if (matches.length > limit) {
+                                const note = document.createElement('div');
+                                note.style.textAlign = 'center';
+                                note.style.color = 'var(--accent-gold)';
+                                note.style.fontWeight = 'bold';
+                                note.style.marginBottom = '1rem';
+                                note.style.fontSize = '1.1rem';
+                                note.innerText = `נמצאו ${matches.length} פסוקים בגימטריה זו. מציג את 50 הראשונים:`;
+                                detailGrid.appendChild(note);
+                            }
+                            
+                            displayMatches.forEach(match => {
+                                const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
+                                const item = document.createElement('div');
+                                item.className = 'gematria-repetition-item';
+                                item.style.cursor = 'pointer';
+                                item.style.padding = '0.5rem 0';
+                                item.style.borderBottom = '1px solid var(--border-color)';
+                                item.style.transition = 'color 0.2s';
+                                
+                                item.addEventListener('mouseenter', () => { item.style.color = 'var(--accent-gold)'; });
+                                item.addEventListener('mouseleave', () => { item.style.color = ''; });
+                                
+                                if (insightMatch) {
+                                    item.addEventListener('click', () => {
+                                        openInsightReader(insightMatch.id);
+                                        switchView('insight-reader-view');
+                                    });
+                                } else {
+                                    item.addEventListener('click', () => {
+                                        document.getElementById('edit-verse').value = `${match.bookHeb} ${match.chapter}, ${match.verse}`;
+                                        document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
+                                        switchView('scribe-desk-view');
+                                        document.querySelectorAll('.nav-link').forEach(link => {
+                                            if (link.getAttribute('data-target') === 'scribe-desk-view') {
+                                                link.classList.add('active');
+                                            } else {
+                                                link.classList.remove('active');
+                                            }
+                                        });
+                                    });
+                                }
+                                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                                item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1.0rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
+                                detailGrid.appendChild(item);
+                            });
+                        } else {
+                            detailGrid.innerHTML = `
+                                <div class="empty-state" style="padding: 2rem 0;">
+                                    <p>לא נמצאו פסוקים במאגר בעלי גימטריה זהה ל-${scoreWord}.</p>
+                                </div>
+                            `;
+                        }
+                        
+                        detailSection.style.display = 'block';
+                        detailSection.scrollIntoView({ behavior: 'smooth' });
+                    }
                 });
 
                 wordsList.appendChild(span);
@@ -2112,10 +2243,21 @@ function initWordRepetitionCalculator() {
     if (verseInput) {
         verseInput.addEventListener('input', () => {
             const val = verseInput.value.trim();
+            
+            // Sync shared verse
+            State.sharedVerse = val;
+            localStorage.setItem('torah_shared_verse', val);
+
             if (!val) {
                 analysisResults.style.display = 'none';
                 return;
             }
+
+            // Add to history after typing stops
+            clearTimeout(verseInput._historyTimeout);
+            verseInput._historyTimeout = setTimeout(() => {
+                addToHistory('wordRep', val);
+            }, 1000);
 
             // Clean text: strip nikud and punctuation, keep letters and spaces
             const cleanText = stripNikud(val).replace(/[^א-ת\s]/g, "").replace(/\s+/g, " ").trim();
@@ -3334,6 +3476,10 @@ window.addEventListener('DOMContentLoaded', () => {
     initLibraryView();
     initAdminModals(); // Initialize modal handlers for Admin
     initAdminVerseManagement(); // Initialize admin verse management selectors
+    
+    // Sync shared inputs and render initial histories
+    syncSharedVerseAndRenderHistories(State.activeView);
+    
     loadFromServer().then(() => {
         loadDefaultData();
     });
@@ -3829,13 +3975,20 @@ function initRasheiTeivot() {
     let debounceTimer = null;
 
     input.addEventListener('input', () => {
+        const val = input.value.trim();
+        
+        // Sync shared verse
+        State.sharedVerse = val;
+        localStorage.setItem('torah_shared_verse', val);
+
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            const val = input.value.trim();
             if (!val) {
                 resultsContainer.style.display = 'none';
                 return;
             }
+
+            addToHistory('rashei', val);
 
             const rashei = getRashei(val);
             const sofei = getSofei(val);
@@ -4245,14 +4398,22 @@ function initUnifiedAnalysis() {
 
     let uvaDebounce = null;
     input.addEventListener('input', () => {
+        const val = input.value.trim();
+        
+        // Sync shared verse
+        State.sharedVerse = val;
+        localStorage.setItem('torah_shared_verse', val);
+
         clearTimeout(uvaDebounce);
         uvaDebounce = setTimeout(() => {
-            const val = input.value.trim();
             if (!val) {
                 resultsContainer.style.display = 'none';
                 document.getElementById('uva-detail-panel').style.display = 'none';
                 return;
             }
+            
+            addToHistory('unified', val);
+            
             resultsContainer.style.display = 'block';
 
             // --- 1. GEMATRIA ---
@@ -4394,5 +4555,119 @@ function initUnifiedAnalysis() {
 
         }, 400);
     });
+}
+
+// --- History & Shared Verse Helpers ---
+function addToHistory(type, query) {
+    if (!query) return;
+    const cleanQuery = query.trim();
+    if (!cleanQuery) return;
+    
+    if (!State.searchHistory) {
+        State.searchHistory = { gematria: [], wordRep: [], rashei: [], unified: [] };
+    }
+    if (!State.searchHistory[type]) {
+        State.searchHistory[type] = [];
+    }
+    
+    // Remove if already exists to put it at top
+    State.searchHistory[type] = State.searchHistory[type].filter(item => item !== cleanQuery);
+    
+    // Insert at front
+    State.searchHistory[type].unshift(cleanQuery);
+    
+    // Limit to 10
+    if (State.searchHistory[type].length > 10) {
+        State.searchHistory[type] = State.searchHistory[type].slice(0, 10);
+    }
+    
+    localStorage.setItem('torah_search_history', JSON.stringify(State.searchHistory));
+    
+    // Re-render
+    let listId = '';
+    if (type === 'gematria') listId = 'gematria-history-list';
+    else if (type === 'wordRep') listId = 'word-rep-history-list';
+    else if (type === 'rashei') listId = 'rashei-history-list';
+    else if (type === 'unified') listId = 'unified-history-list';
+    
+    renderHistoryPanel(type, listId);
+}
+
+function renderHistoryPanel(type, listId) {
+    const listEl = document.getElementById(listId);
+    if (!listEl) return;
+    
+    listEl.innerHTML = '';
+    const history = (State.searchHistory && State.searchHistory[type]) ? State.searchHistory[type] : [];
+    
+    if (history.length === 0) {
+        listEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem; text-align: center;">אין היסטוריה.</div>';
+        return;
+    }
+    
+    history.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.textContent = item;
+        div.title = item;
+        div.addEventListener('click', () => {
+            // Update shared verse and trigger input
+            State.sharedVerse = item;
+            localStorage.setItem('torah_shared_verse', item);
+            
+            let inputId = '';
+            if (type === 'gematria') inputId = 'calc-input';
+            else if (type === 'wordRep') inputId = 'verse-analysis-input';
+            else if (type === 'rashei') inputId = 'rt-input';
+            else if (type === 'unified') inputId = 'uva-input';
+            
+            const inp = document.getElementById(inputId);
+            if (inp) {
+                inp.value = item;
+                inp.dispatchEvent(new Event('input'));
+            }
+        });
+        listEl.appendChild(div);
+    });
+}
+
+function syncSharedVerseAndRenderHistories(targetId) {
+    if (targetId === 'gematria-view') {
+        const inp = document.getElementById('calc-input');
+        if (inp) {
+            if (State.sharedVerse && inp.value !== State.sharedVerse) {
+                inp.value = State.sharedVerse;
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+        renderHistoryPanel('gematria', 'gematria-history-list');
+    } else if (targetId === 'word-repetition-view') {
+        const inp = document.getElementById('verse-analysis-input');
+        if (inp) {
+            if (State.sharedVerse && inp.value !== State.sharedVerse) {
+                inp.value = State.sharedVerse;
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+        renderHistoryPanel('wordRep', 'word-rep-history-list');
+    } else if (targetId === 'rashei-teivot-view') {
+        const inp = document.getElementById('rt-input');
+        if (inp) {
+            if (State.sharedVerse && inp.value !== State.sharedVerse) {
+                inp.value = State.sharedVerse;
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+        renderHistoryPanel('rashei', 'rashei-history-list');
+    } else if (targetId === 'verse-analysis-unified-view') {
+        const inp = document.getElementById('uva-input');
+        if (inp) {
+            if (State.sharedVerse && inp.value !== State.sharedVerse) {
+                inp.value = State.sharedVerse;
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+        renderHistoryPanel('unified', 'unified-history-list');
+    }
 }
 

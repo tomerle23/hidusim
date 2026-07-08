@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body data-theme="light">
+<body data-bg="parchment" data-text="espresso">
     <div class="app-container">
         
         <!-- Header -->
@@ -62,13 +62,30 @@
                         <option value="admin">מנהל מערכת</option>
                     </select>
                 </div>
-                <div class="theme-switcher">
-                    <select id="theme-selector" class="role-select" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.4rem 0.8rem; border-radius: var(--border-radius-sm); font-family: var(--font-sans); cursor: pointer; outline: none; font-weight: 600;" title="בחר סגנון תצוגה">
-                        <option value="light">מראה קלף (יום)</option>
-                        <option value="dark">מראה לילה (חושך)</option>
-                        <option value="blue">רקע לבן וכיתוב כחול</option>
-                        <option value="high-contrast">רקע לבן וכיתוב שחור</option>
-                    </select>
+                <div class="theme-switcher" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-sans); white-space: nowrap;">רקע:</label>
+                            <select id="bg-selector" class="role-select" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.3rem 0.6rem; border-radius: var(--border-radius-sm); font-family: var(--font-sans); cursor: pointer; outline: none; font-weight: 600; font-size: 0.85rem;" title="בחר רקע">
+                                <option value="parchment">קלף (חום-שמנת)</option>
+                                <option value="dark">לילה (כהה)</option>
+                                <option value="white">לבן</option>
+                                <option value="blue">תכלת (עדין)</option>
+                                <option value="grey">אפור (עדין)</option>
+                                <option value="green">ירוק (עדין)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-sans); white-space: nowrap;">כיתוב:</label>
+                            <select id="text-selector" class="role-select" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.3rem 0.6rem; border-radius: var(--border-radius-sm); font-family: var(--font-sans); cursor: pointer; outline: none; font-weight: 600; font-size: 0.85rem;" title="בחר צבע כיתוב">
+                                <option value="espresso">אספרסו (חום)</option>
+                                <option value="blue">כחול</option>
+                                <option value="black">שחור</option>
+                                <option value="grey">אפור</option>
+                                <option value="gold">זהב</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -282,30 +299,51 @@
 
             <!-- VIEW 4: GEMATRIA CALCULATOR -->
             <section id="gematria-view" class="page-view">
-                <div class="gematria-calc-container">
-                    <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">מחשבון גימטריה תורני</h2>
-                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">חשב את הערך הגימטרי של מילה או פסוק, ומצא מיידית חיבורים מקבילים מתוך דפי הלימוד</p>
-
-                    <div class="calc-input-wrapper">
-                        <input type="text" id="calc-input" class="calc-input" placeholder="הקלד מילה, משפט או פסוק בעברית (למשל: ואתחנן)...">
+                <div class="page-with-history">
+                    <!-- History Sidebar -->
+                    <div class="history-sidebar" id="gematria-history-panel">
+                        <div class="history-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> היסטוריה</div>
+                        <div class="history-items-list" id="gematria-history-list"></div>
                     </div>
 
-                    <div class="calc-result-box" id="calc-result-box" style="display: none;">
-                        <span class="calc-result-number" id="calc-result-num">0</span>
-                        <span class="calc-result-hebrew" id="calc-result-heb"></span>
-                    </div>
+                    <!-- Main Content -->
+                    <div class="gematria-calc-container">
+                        <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">מחשבון גימטריה תורני</h2>
+                        <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">חשב את הערך הגימטרי של מילה או פסוק, ומצא מיידית חיבורים מקבילים מתוך דפי הלימוד</p>
 
-                    <!-- New Section: Word-by-Word Gematria Analysis -->
-                    <div id="gematria-words-analysis" style="display: none; margin-top: 1.5rem; background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); text-align: right; line-height: 1.8;">
-                        <strong style="color: var(--accent-gold); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><i class="fa-solid fa-calculator"></i> ערך גימטרי לכל מילה (לחץ לחיפוש מקבילות):</strong>
-                        <div id="gematria-words-list" style="font-size: 1.1rem; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;"></div>
-                    </div>
+                        <div class="calc-input-wrapper">
+                            <input type="text" id="calc-input" class="calc-input" placeholder="הקלד מילה, משפט או פסוק בעברית (למשל: ואתחנן)...">
+                        </div>
 
-                    <div class="calc-matches-section" id="calc-matches-section" style="display: none;">
-                        <h3><i class="fa-solid fa-link"></i> חיבורים ומקבילות בגימטריה זו</h3>
-                        <!-- Simple list style for gematria matches instead of grid cards -->
-                        <div id="calc-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; text-align: right; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.7;">
-                            <!-- Matched items will render here -->
+                        <div class="calc-result-box" id="calc-result-box" style="display: none;">
+                            <span class="calc-result-number" id="calc-result-num">0</span>
+                            <span class="calc-result-hebrew" id="calc-result-heb"></span>
+                        </div>
+
+                        <!-- Word-by-Word Gematria Analysis -->
+                        <div id="gematria-words-analysis" style="display: none; margin-top: 1.5rem; background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); text-align: right; line-height: 1.8;">
+                            <strong style="color: var(--accent-gold); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><i class="fa-solid fa-calculator"></i> ערך גימטרי לכל מילה (לחץ לתוצאות נוספות למטה):</strong>
+                            <div id="gematria-words-list" style="font-size: 1.1rem; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;"></div>
+                        </div>
+
+                        <div class="calc-matches-section" id="calc-matches-section" style="display: none;">
+                            <h3><i class="fa-solid fa-link"></i> חיבורים ומקבילות בגימטריה זו</h3>
+                            <div id="calc-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; text-align: right; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.7;">
+                            </div>
+                        </div>
+
+                        <!-- Inline Word Detail Panel -->
+                        <div id="calc-word-detail-section" style="display: none; margin-top: 2rem; border-top: 2px solid var(--accent-gold); padding-top: 1.5rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                <h3 style="margin: 0; color: var(--accent-gold);"><i class="fa-solid fa-magnifying-glass"></i> ניתוח מילה: <span id="calc-word-detail-word" style="font-family: var(--font-serif); font-size: 1.3rem;"></span></h3>
+                                <button id="calc-word-detail-close" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: var(--border-radius-sm); cursor: pointer; font-size: 0.9rem;"><i class="fa-solid fa-xmark"></i> סגור</button>
+                            </div>
+                            <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+                                <span id="calc-word-detail-score" style="font-size: 2rem; font-weight: 900; color: var(--accent-gold);"></span>
+                                <span id="calc-word-detail-heb" style="color: var(--text-muted); font-size: 1rem;"></span>
+                            </div>
+                            <div id="calc-word-detail-grid" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: right; font-family: var(--font-serif); font-size: 1.2rem; line-height: 1.7;">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -336,6 +374,12 @@
 
             <!-- VIEW 5: WORD REPETITION (CONCORDANCE) -->
             <section id="word-repetition-view" class="page-view">
+                <div class="page-with-history">
+                    <!-- History Sidebar -->
+                    <div class="history-sidebar" id="word-rep-history-panel">
+                        <div class="history-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> היסטוריה</div>
+                        <div class="history-items-list" id="word-rep-history-list"></div>
+                    </div>
                 <div class="gematria-calc-container">
                     <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">איתור חזרת מילים</h2>
                     <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">הקלד מילה או רצף אותיות כדי לאתר מיידית את כל הפסוקים במאגר המכילים אותם במדויק (ללא ניקוד)</p>
@@ -386,6 +430,7 @@
                         </div>
                     </div>
                 </div>
+                </div><!-- /page-with-history -->
             </section>
 
             <!-- VIEW 6: MY LIBRARY (BOOKMARKS & UPLOADER) -->
@@ -453,6 +498,12 @@
 
             <!-- VIEW 10: RASHEI & SOFEI TEIVOT -->
             <section id="rashei-teivot-view" class="page-view">
+                <div class="page-with-history">
+                    <!-- History Sidebar -->
+                    <div class="history-sidebar" id="rashei-history-panel">
+                        <div class="history-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> היסטוריה</div>
+                        <div class="history-items-list" id="rashei-history-list"></div>
+                    </div>
                 <div class="gematria-calc-container" style="max-width: 1100px;">
                     <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-spell-check"></i> ניתוח ראשי תיבות וסופי תיבות</h2>
                     <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">הקלד או הדבק פסוק כדי לחשב את ראשי התיבות וסופי התיבות שלו, ולאתר פסוקים מקבילים במאגר</p>
@@ -520,6 +571,7 @@
                         </div>
                     </div>
                 </div>
+                </div><!-- /page-with-history -->
             </section>
 
             <!-- VIEW 9: QERE KETIV CORRECTIONS VIEW -->
@@ -527,7 +579,13 @@
 
             <!-- VIEW 10: UNIFIED VERSE ANALYSIS -->
             <section id="verse-analysis-unified-view" class="page-view">
-                <div style="max-width: 1200px; margin: 0 auto; padding: 2rem 1rem;">
+                <div class="page-with-history">
+                    <!-- History Sidebar -->
+                    <div class="history-sidebar" id="unified-history-panel">
+                        <div class="history-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> היסטוריה</div>
+                        <div class="history-items-list" id="unified-history-list"></div>
+                    </div>
+                <div style="max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; flex: 1;">
                     <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.4rem;">
                         <i class="fa-solid fa-magnifying-glass-chart"></i> ניתוח פסוק מאוחד
                     </h2>
@@ -643,6 +701,7 @@
 
                     </div>
                 </div>
+                </div><!-- /page-with-history -->
             </section>
             <section id="admin-requests-view" class="page-view">
                 <div class="editor-container" style="max-width: 900px;">

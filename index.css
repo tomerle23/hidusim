@@ -189,7 +189,7 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-[data-theme="dark"] .logo-title {
+body[data-bg="dark"] .logo-title {
     background: linear-gradient(135deg, #FFF, var(--accent-gold));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -731,7 +731,7 @@ body {
     gap: 0.25rem;
 }
 
-[data-theme="dark"] .pardes-section-title {
+body[data-bg="dark"] .pardes-section-title {
     color: var(--accent-gold);
 }
 
@@ -764,7 +764,7 @@ body {
     border-right-color: var(--accent-royal);
 }
 
-[data-theme="dark"] .general-insight-block {
+body[data-bg="dark"] .general-insight-block {
     border-right-color: var(--accent-gold);
 }
 
@@ -1018,7 +1018,7 @@ body {
     position: relative;
 }
 
-[data-theme="dark"] .editor-preview-panel {
+body[data-bg="dark"] .editor-preview-panel {
     background-color: #171E2E;
     color: #ECEFF4;
 }
@@ -1401,7 +1401,7 @@ body {
     gap: 0.5rem;
 }
 
-[data-theme="dark"] .index-category-title {
+body[data-bg="dark"] .index-category-title {
     color: var(--accent-gold);
     border-bottom-color: var(--border-color);
 }
@@ -1439,7 +1439,7 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
-[data-theme="dark"] .index-book-card.expanded {
+body[data-bg="dark"] .index-book-card.expanded {
     border-color: var(--accent-gold);
 }
 
@@ -1475,7 +1475,7 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
-[data-theme="dark"] .index-book-count-badge {
+body[data-bg="dark"] .index-book-count-badge {
     background-color: var(--accent-gold);
     color: var(--bg-primary);
 }
@@ -1561,7 +1561,7 @@ body {
     font-weight: bold;
 }
 
-[data-theme="dark"] .index-chapter-btn.has-commentaries {
+body[data-bg="dark"] .index-chapter-btn.has-commentaries {
     border-color: var(--accent-gold);
     color: var(--accent-gold);
 }
@@ -1571,7 +1571,7 @@ body {
     color: var(--bg-card);
 }
 
-[data-theme="dark"] .index-chapter-btn.has-commentaries:hover {
+body[data-bg="dark"] .index-chapter-btn.has-commentaries:hover {
     background-color: var(--accent-gold);
     color: var(--bg-card);
 }
@@ -1782,5 +1782,82 @@ body {
 .status-rejected {
     background: rgba(229, 62, 62, 0.15);
     color: #e53e3e;
+}
+
+/* --- History Sidebar and Page Layout --- */
+.page-with-history {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.history-sidebar {
+    width: 240px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    max-height: calc(100vh - 160px);
+    position: sticky;
+    top: 100px;
+    overflow-y: auto;
+}
+.history-panel-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--accent-gold);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+.history-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.history-item {
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+}
+.history-item:hover {
+    background: rgba(var(--accent-gold-rgb), 0.1);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+.page-with-history .gematria-calc-container {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    max-width: none;
+}
+/* Adjust layout on smaller screens */
+@media (max-width: 768px) {
+    .page-with-history {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .history-sidebar {
+        width: 100%;
+        position: static;
+        max-height: 200px;
+    }
 }
 
