@@ -22,20 +22,20 @@
             </div>
             
             <nav class="app-nav">
-                <button class="nav-link active" data-target="study-hall-view">
+                <button class="nav-link" data-target="study-hall-view" style="display: none;">
                     <i class="fa-solid fa-book-open"></i> בית המדרש
                 </button>
-                <button class="nav-link" data-target="index-view">
+                <button class="nav-link" data-target="index-view" style="display: none;">
                     <i class="fa-solid fa-list-ol"></i> מפתח הפירושים
                 </button>
-                <button class="nav-link" data-target="scribe-desk-view">
+                <button class="nav-link" data-target="scribe-desk-view" style="display: none;">
                     <i class="fa-solid fa-feather-pointed"></i> השולחן שלי
+                </button>
+                <button class="nav-link active" data-target="gematria-view">
+                    <i class="fa-solid fa-calculator"></i> מחשבון גימטריה
                 </button>
                 <button class="nav-link" data-target="word-repetition-view">
                     <i class="fa-solid fa-arrows-rotate"></i> חזרת מילים
-                </button>
-                <button class="nav-link" data-target="gematria-view">
-                    <i class="fa-solid fa-calculator"></i> מחשבון גימטריה
                 </button>
                 <button class="nav-link" data-target="library-view">
                     <i class="fa-solid fa-bookmark"></i> הספרייה שלי
@@ -45,6 +45,9 @@
                 </button>
                 <button class="nav-link" data-target="verse-analysis-unified-view">
                     <i class="fa-solid fa-magnifying-glass-chart"></i> ניתוח פסוק
+                </button>
+                <button class="nav-link" data-target="anagram-finder-view">
+                    <i class="fa-solid fa-shapes"></i> הרכבת מילים (אנגרמה)
                 </button>
 
                 <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none;">
@@ -94,7 +97,7 @@
         <main class="main-content">
             
             <!-- VIEW 1: STUDY HALL (FEED) -->
-            <section id="study-hall-view" class="page-view active">
+            <section id="study-hall-view" class="page-view">
                 <div class="study-hall-header">
                     <h2>היכל החידושים של בית המדרש</h2>
                     <p>עיין בפנינים, חידושים והארות שנכתבו על התורה, הגמרא וההלכה</p>
@@ -298,7 +301,7 @@
             </section>
 
             <!-- VIEW 4: GEMATRIA CALCULATOR -->
-            <section id="gematria-view" class="page-view">
+            <section id="gematria-view" class="page-view active">
                 <div class="page-with-history">
                     <!-- History Sidebar -->
                     <div class="history-sidebar" id="gematria-history-panel">
@@ -343,6 +346,41 @@
                                 <span id="calc-word-detail-heb" style="color: var(--text-muted); font-size: 1rem;"></span>
                             </div>
                             <div id="calc-word-detail-grid" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: right; font-family: var(--font-serif); font-size: 1.2rem; line-height: 1.7;">
+                            </div>
+                        </div>
+
+                        <!-- Multi-Verse / Chapter Gematria Analysis (Distribution by Books) -->
+                        <div class="calc-matches-section" style="margin-top: 3rem; border-top: 2px solid var(--border-color); padding-top: 2rem;">
+                            <h3><i class="fa-solid fa-chart-column"></i> ניתוח רב-פסוקי והתפלגות גימטריה לפי ספרים (ניתוח פרק)</h3>
+                            <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;">
+                                הקלד או הדבק מספר פסוקים (כל פסוק בשורה חדשה), כדי לחשב את הגימטריה של כל פסוק ולראות את כמות ההקבלות בכל ספרי התנ"ך
+                            </p>
+
+                            <div class="calc-input-wrapper" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <textarea id="multi-gematria-input" class="calc-input" style="height: 220px; min-height: 180px; padding: 0.85rem; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.6; resize: vertical;" placeholder="הדבק או הקלד פסוקים (כל פסוק בשורה חדשה), למשל:
+איש היה בארץ עוץ איוב שמו והיה האיש ההוא תם וישר וירא אלהים וסר מרע.
+ויולדו לו שבעה בנים ושלוש בנות."></textarea>
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                    <button id="multi-gematria-btn" class="primary-btn" style="padding: 0.65rem 1.5rem; font-size: 1.05rem; cursor: pointer;">
+                                        <i class="fa-solid fa-square-poll-vertical"></i> נתח התפלגות ספרים
+                                    </button>
+                                    <div id="multi-gematria-sort-controls" style="display: none; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                                        <span>מיון ספרים:</span>
+                                        <button id="sort-books-canonical" class="category-tab active" style="padding: 0.2rem 0.6rem; font-size: 0.85rem; cursor: pointer;">לפי סדר התנ"ך</button>
+                                        <button id="sort-books-count" class="category-tab" style="padding: 0.2rem 0.6rem; font-size: 0.85rem; cursor: pointer;">לפי כמות הקבלות</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Results Container -->
+                            <div id="multi-gematria-results" style="display: none; margin-top: 1.5rem;">
+                                <!-- Summary Table / Text -->
+                                <div id="multi-gematria-summary" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); padding: 1.25rem 1.5rem; border-radius: var(--border-radius-md); margin-bottom: 1.5rem; line-height: 1.8;">
+                                </div>
+
+                                <!-- Book Distribution Detailed List -->
+                                <div id="multi-gematria-books-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -702,6 +740,59 @@
                     </div>
                 </div>
                 </div><!-- /page-with-history -->
+            </section>
+
+            <!-- VIEW: ANAGRAM / LETTER COMBINATION FINDER -->
+            <section id="anagram-finder-view" class="page-view">
+                <div class="page-with-history">
+                    <!-- History Sidebar -->
+                    <div class="history-sidebar" id="anagram-history-panel">
+                        <div class="history-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> היסטוריה</div>
+                        <div class="history-items-list" id="anagram-history-list"></div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="gematria-calc-container" style="max-width: 1100px;">
+                        <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;">
+                            <i class="fa-solid fa-shapes"></i> הרכבת מילים מאותיות (אנגרמה)
+                        </h2>
+                        <p style="text-align: center; color: var(--text-muted); margin-bottom: 1.5rem;">
+                            הזן אותיות בעברית כדי למצוא את כל המילים בתנ"ך שניתן להרכיב מהן (בנות 3 אותיות ומעלה, ממוינות מהארוכה לקצרה)
+                        </p>
+
+                        <div class="calc-input-wrapper" style="display: flex; gap: 0.75rem;">
+                            <input type="text" id="anagram-input" class="calc-input" placeholder="הקלד אותיות (למשל: ולכילדל, בראשית, ואתחנן)..." style="flex: 1;">
+                            <button id="anagram-search-btn" class="primary-btn" style="padding: 0.75rem 1.5rem; font-size: 1.1rem; white-space: nowrap; cursor: pointer;">
+                                <i class="fa-solid fa-magnifying-glass"></i> הרכב מילים
+                            </button>
+                        </div>
+
+                        <!-- Summary & Letter Frequencies Bar -->
+                        <div id="anagram-summary-bar" style="display: none; margin-top: 1.5rem; background: var(--bg-secondary); padding: 1.25rem 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); text-align: right; line-height: 1.8;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+                                <div>
+                                    <strong style="color: var(--accent-gold); font-size: 1.2rem;">
+                                        <i class="fa-solid fa-list-check"></i> נמצאו <span id="anagram-total-words" style="font-weight: 900; font-size: 1.4rem;">0</span> מילים ייחודיות
+                                    </strong>
+                                </div>
+                                <div style="color: var(--text-muted); font-size: 0.95rem;">
+                                    אורך מילה מקסימלי: <strong id="anagram-max-length" style="color: var(--text-primary);">0</strong> אותיות
+                                </div>
+                            </div>
+                            <div style="font-size: 0.95rem; color: var(--text-muted);">
+                                <strong>אותיות שזוהו בחיפוש (סופיות מושוות לרגילות):</strong>
+                                <div id="anagram-letters-breakdown" style="display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; margin-top: 0.4rem; font-family: var(--font-sans); font-size: 1rem;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Results Container grouped by word length -->
+                        <div id="anagram-results-container" style="display: none; margin-top: 2rem;">
+                            <div id="anagram-length-groups" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                <!-- Length groups will be rendered here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
             <section id="admin-requests-view" class="page-view">
                 <div class="editor-container" style="max-width: 900px;">
