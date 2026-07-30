@@ -31,26 +31,26 @@
                 <button class="nav-link" data-target="scribe-desk-view" style="display: none;">
                     <i class="fa-solid fa-feather-pointed"></i> השולחן שלי
                 </button>
-                <button class="nav-link active" data-target="gematria-view">
+                <button class="nav-link" data-target="gematria-view">
                     <i class="fa-solid fa-calculator"></i> מחשבון גימטריה
                 </button>
                 <button class="nav-link" data-target="word-repetition-view">
                     <i class="fa-solid fa-arrows-rotate"></i> חזרת מילים
                 </button>
-                <button class="nav-link" data-target="library-view">
+                <button class="nav-link" data-target="library-view" style="display: none;">
                     <i class="fa-solid fa-bookmark"></i> הספרייה שלי
                 </button>
                 <button class="nav-link" data-target="rashei-teivot-view">
                     <i class="fa-solid fa-spell-check"></i> ראשי וסופי תיבות
                 </button>
-                <button class="nav-link" data-target="verse-analysis-unified-view">
+                <button class="nav-link active" data-target="verse-analysis-unified-view">
                     <i class="fa-solid fa-magnifying-glass-chart"></i> ניתוח פסוק
                 </button>
                 <button class="nav-link" data-target="anagram-finder-view">
                     <i class="fa-solid fa-shapes"></i> הרכבת מילים (אנגרמה)
                 </button>
 
-                <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none;">
+                <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none !important;">
                     <i class="fa-solid fa-clipboard-check"></i> ניהול בקשות <span class="badge" id="pending-requests-badge" style="display: none; background: #e53e3e; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-right: 0.25rem;">0</span>
                 </button>
                 <button class="nav-link admin-only" data-target="admin-verse-view" id="nav-admin-verse" style="display: none;">
@@ -301,7 +301,7 @@
             </section>
 
             <!-- VIEW 4: GEMATRIA CALCULATOR -->
-            <section id="gematria-view" class="page-view active">
+            <section id="gematria-view" class="page-view">
                 <div class="page-with-history">
                     <!-- History Sidebar -->
                     <div class="history-sidebar" id="gematria-history-panel">
@@ -353,8 +353,33 @@
                         <div class="calc-matches-section" style="margin-top: 3rem; border-top: 2px solid var(--border-color); padding-top: 2rem;">
                             <h3><i class="fa-solid fa-chart-column"></i> ניתוח רב-פסוקי והתפלגות גימטריה לפי ספרים (ניתוח פרק)</h3>
                             <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;">
-                                הקלד או הדבק מספר פסוקים (כל פסוק בשורה חדשה), כדי לחשב את הגימטריה של כל פסוק ולראות את כמות ההקבלות בכל ספרי התנ"ך
+                                הקלד או הדבק מספר פסוקים (כל פסוק בשורה חדשה), או בחר פרק מהמאגר לטעינה אוטומטית:
                             </p>
+
+                            <!-- Chapter Auto-Loader Bar -->
+                            <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); padding: 0.85rem 1.25rem; border-radius: var(--border-radius-md); margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--accent-gold); font-size: 1rem;">
+                                    <i class="fa-solid fa-book-open-reader"></i>
+                                    <span>טעינת פרק שלם מתוך המאגר:</span>
+                                </div>
+                                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <label for="mg-book-select" style="font-size: 0.85rem; color: var(--text-muted);">ספר:</label>
+                                        <select id="mg-book-select" style="background: var(--bg-primary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.35rem 0.75rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1rem; cursor: pointer; outline: none; min-width: 150px;">
+                                            <option value="">-- בחר ספר --</option>
+                                        </select>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <label for="mg-chapter-select" style="font-size: 0.85rem; color: var(--text-muted);">פרק:</label>
+                                        <select id="mg-chapter-select" style="background: var(--bg-primary); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.35rem 0.75rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1rem; cursor: pointer; outline: none; min-width: 110px;" disabled>
+                                            <option value="">-- בחר פרק --</option>
+                                        </select>
+                                    </div>
+                                    <button id="mg-load-chapter-btn" class="primary-btn" style="padding: 0.35rem 1rem; font-size: 0.95rem; cursor: pointer;" disabled>
+                                        <i class="fa-solid fa-arrow-down-to-bracket"></i> טען פרק
+                                    </button>
+                                </div>
+                            </div>
 
                             <div class="calc-input-wrapper" style="display: flex; flex-direction: column; gap: 0.75rem;">
                                 <textarea id="multi-gematria-input" class="calc-input" style="height: 220px; min-height: 180px; padding: 0.85rem; font-family: var(--font-serif); font-size: 1.25rem; line-height: 1.6; resize: vertical;" placeholder="הדבק או הקלד פסוקים (כל פסוק בשורה חדשה), למשל:
@@ -580,6 +605,8 @@
                             <button class="category-tab rt-tab" data-rt-tab="anagram-sofei">6. אנגרמת סופי תיבות</button>
                             <button class="category-tab rt-tab" data-rt-tab="gematria-rashei">7. גימטריה ראשי תיבות</button>
                             <button class="category-tab rt-tab" data-rt-tab="gematria-sofei">8. גימטריה סופי תיבות</button>
+                            <button class="category-tab rt-tab" data-rt-tab="words-anagram-rashei">9. הרכבת מילים מראשי תיבות</button>
+                            <button class="category-tab rt-tab" data-rt-tab="words-anagram-sofei">10. הרכבת מילים מסופי תיבות</button>
                         </div>
 
                         <!-- Result panels -->
@@ -607,6 +634,14 @@
                             <h3 style="font-size: 1.1rem; color: var(--accent-gold); margin-bottom: 0.5rem;"><i class="fa-solid fa-calculator"></i> פסוקים בעלי גימטריה זהה לסופי תיבות</h3>
                             <div id="rt-list-gematria-sofei" style="display: flex; flex-direction: column; gap: 0.75rem; font-family: var(--font-serif); font-size: 1.15rem; line-height: 1.7;"></div>
                         </div>
+                        <div id="rt-panel-words-anagram-rashei" class="rt-panel" style="display: none;">
+                            <h3 style="font-size: 1.1rem; color: var(--accent-gold); margin-bottom: 0.75rem;"><i class="fa-solid fa-shapes"></i> מילים בתנ"ך שניתן להרכיב מאותיות ראשי התיבות</h3>
+                            <div id="rt-list-words-anagram-rashei" style="display: flex; flex-direction: column; gap: 1.25rem;"></div>
+                        </div>
+                        <div id="rt-panel-words-anagram-sofei" class="rt-panel" style="display: none;">
+                            <h3 style="font-size: 1.1rem; color: var(--accent-gold); margin-bottom: 0.75rem;"><i class="fa-solid fa-shapes"></i> מילים בתנ"ך שניתן להרכיב מאותיות סופי התיבות</h3>
+                            <div id="rt-list-words-anagram-sofei" style="display: flex; flex-direction: column; gap: 1.25rem;"></div>
+                        </div>
                     </div>
                 </div>
                 </div><!-- /page-with-history -->
@@ -616,7 +651,7 @@
 
 
             <!-- VIEW 10: UNIFIED VERSE ANALYSIS -->
-            <section id="verse-analysis-unified-view" class="page-view">
+            <section id="verse-analysis-unified-view" class="page-view active">
                 <div class="page-with-history">
                     <!-- History Sidebar -->
                     <div class="history-sidebar" id="unified-history-panel">
@@ -713,15 +748,24 @@
                                 </div>
                                 <!-- Tabs for RT matches -->
                                 <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.75rem;">
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="exact-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">ראשי זהה <span id="uva-rt-cnt-er">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="exact-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">סופי זהה <span id="uva-rt-cnt-es">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">גימטריית ראשי <span id="uva-rt-cnt-gr">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">גימטריית סופי <span id="uva-rt-cnt-gs">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab active" data-uva-rt-tab="exact-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">3. ראשי זהה <span id="uva-rt-cnt-er">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="exact-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">4. סופי זהה <span id="uva-rt-cnt-es">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="anagram-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">5. אנגרמת ראשי <span id="uva-rt-cnt-ar">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="anagram-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">6. אנגרמת סופי <span id="uva-rt-cnt-as">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">7. גימטריית ראשי <span id="uva-rt-cnt-gr">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">8. גימטריית סופי <span id="uva-rt-cnt-gs">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="words-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">9. מילים מראשי <span id="uva-rt-cnt-wr">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="words-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">10. מילים מסופי <span id="uva-rt-cnt-ws">(0)</span></button>
                                 </div>
-                                <div id="uva-rt-panel-exact-rashei" class="uva-rt-panel" style="display:block; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-exact-sofei" class="uva-rt-panel" style="display:none; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-gem-rashei" class="uva-rt-panel" style="display:none; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-gem-sofei" class="uva-rt-panel" style="display:none; max-height: 220px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <!-- Panels -->
+                                <div id="uva-rt-panel-exact-rashei" class="uva-rt-panel" style="display:block; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-exact-sofei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-anagram-rashei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-anagram-sofei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-gem-rashei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-gem-sofei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
+                                <div id="uva-rt-panel-words-rashei" class="uva-rt-panel" style="display:none; max-height: 320px; overflow-y: auto;"></div>
+                                <div id="uva-rt-panel-words-sofei" class="uva-rt-panel" style="display:none; max-height: 320px; overflow-y: auto;"></div>
                             </div>
 
                         </div>

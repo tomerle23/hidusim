@@ -12,7 +12,7 @@ const State = {
     userInsights: [],    // Insights written by user
     uploadedInsights: [],// Insights uploaded via text files
     userStreak: 3,       // Persistent study streak
-    activeView: 'gematria-view',
+    activeView: 'verse-analysis-unified-view',
     selectedInsightId: null,
     activePardesTab: 'peshat',
     activeLibraryTab: 'bookmarks',
@@ -3871,20 +3871,30 @@ function initRasheiTeivot() {
 
     // Get rashei teivot (first letter of each word)
     function getRashei(text) {
-        const clean = stripNikud(text).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
+        // Strip nikud/cantillation (U+0591-U+05C7), then replace maqaf/hyphen with space,
+        // then keep only Hebrew letters and spaces
+        const clean = text
+            .replace(/[\u0591-\u05C7]/g, '')   // nikud & cantillation
+            .replace(/[\u05BE\u05F3\u05F4\u200D\u200C\uFB1D-\uFB4E]/g, ' ')  // maqaf & special chars -> space
+            .replace(/[^\u05D0-\u05EA\s]/g, '') // keep only Hebrew letters & whitespace
+            .replace(/\s+/g, ' ')
+            .trim();
         if (!clean) return '';
-        return clean.split(' ').map(w => {
-            if (!w) return '';
-            return w[0];
-        }).join('');
+        return clean.split(' ').filter(w => w.length > 0).map(w => w[0]).join('');
     }
 
     // Get sofei teivot (last letter of each word, converted to regular form)
     function getSofei(text) {
-        const clean = stripNikud(text).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
+        // Strip nikud/cantillation (U+0591-U+05C7), then replace maqaf/hyphen with space,
+        // then keep only Hebrew letters and spaces
+        const clean = text
+            .replace(/[\u0591-\u05C7]/g, '')   // nikud & cantillation
+            .replace(/[\u05BE\u05F3\u05F4\u200D\u200C\uFB1D-\uFB4E]/g, ' ')  // maqaf & special chars -> space
+            .replace(/[^\u05D0-\u05EA\s]/g, '') // keep only Hebrew letters & whitespace
+            .replace(/\s+/g, ' ')
+            .trim();
         if (!clean) return '';
-        return clean.split(' ').map(w => {
-            if (!w) return '';
+        return clean.split(' ').filter(w => w.length > 0).map(w => {
             const lastChar = w[w.length - 1];
             return toRegularLetter(lastChar);
         }).join('');
@@ -3897,7 +3907,9 @@ function initRasheiTeivot() {
 
     // Pre-compute rashei/sofei for all tanakh verses (lazy, cached)
     function ensureCache() {
-        if (State.rtCache && State.rtCache.length === State.tanakhVerses.length) return;
+        const RT_CACHE_VERSION = 2; // bump to invalidate cached data
+        if (State.rtCache && State.rtCache.length === State.tanakhVerses.length && State.rtCacheVersion === RT_CACHE_VERSION) return;
+        State.rtCacheVersion = RT_CACHE_VERSION;
         console.time("RT Cache Build");
         State.rtCache = State.tanakhVerses.map(v => {
             const r = getRashei(v.originalText);
@@ -3913,6 +3925,110 @@ function initRasheiTeivot() {
             };
         });
         console.timeEnd("RT Cache Build");
+    }
+
+    // Render word anagram pills grouped by length
+    function renderWordsAnagramList(container, letterString) {
+        container.innerHTML = '';
+        if (!letterString) {
+            container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>אין אותיות לחישוב.</p></div>';
+            return 0;
+        }
+
+        const counts = getHebrewLetterCounts(letterString);
+        const totalLetters = Object.values(counts).reduce((a, b) => a + b, 0);
+        if (totalLetters < 3) {
+            container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>נדרשות לפחות 3 אותיות להרכבת מילים.</p></div>';
+            return 0;
+        }
+
+        const corpus = ensureTanakhWordCorpus();
+        const matches = [];
+
+        for (let item of corpus) {
+            if (item.length >= 3 && item.length <= totalLetters) {
+                if (canFormWordFromCounts(item.normCounts, counts)) {
+                    matches.push(item);
+                }
+            }
+        }
+
+        if (matches.length === 0) {
+            container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>לא נמצאו מילים במאגר התנ"ך בנות 3 אותיות ומעלה שניתן להרכיב מאותיות אלו.</p></div>';
+            return 0;
+        }
+
+        // Group by length
+        const groupsByLength = {};
+        matches.forEach(item => {
+            if (!groupsByLength[item.length]) {
+                groupsByLength[item.length] = [];
+            }
+            groupsByLength[item.length].push(item);
+        });
+
+        const sortedLengths = Object.keys(groupsByLength).map(Number).sort((a, b) => b - a);
+
+        sortedLengths.forEach(len => {
+            const wordsInGroup = groupsByLength[len];
+            wordsInGroup.sort((a, b) => (b.count - a.count) || a.word.localeCompare(b.word, 'he'));
+
+            const groupCard = document.createElement('div');
+            groupCard.style.cssText = "background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1rem 1.25rem;";
+
+            const header = document.createElement('h4');
+            header.style.cssText = "color: var(--accent-gold); margin: 0 0 0.75rem 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center;";
+            header.innerHTML = `
+                <span><i class="fa-solid fa-font"></i> מילים בנות ${len} אותיות</span>
+                <span style="font-size: 0.85rem; background: rgba(var(--accent-gold-rgb), 0.18); color: var(--accent-gold); padding: 0.1rem 0.6rem; border-radius: 12px; font-weight: bold;">
+                    ${wordsInGroup.length} מילים
+                </span>
+            `;
+            groupCard.appendChild(header);
+
+            const wordsList = document.createElement('div');
+            wordsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; font-family: var(--font-sans);";
+
+            wordsInGroup.forEach(item => {
+                const pill = document.createElement('span');
+                pill.className = 'anagram-word-pill';
+                pill.title = `לחץ לחיפוש '${item.word}' במאגר הפסוקים`;
+                pill.style.cssText = "cursor: pointer; padding: 0.3rem 0.65rem; border: 1px solid var(--border-gold); background: var(--bg-card); border-radius: var(--border-radius-sm); font-size: 1rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem;";
+                pill.innerHTML = `<span>${item.word}</span> <strong style="color: var(--accent-gold); font-size: 0.85rem;">(${item.count.toLocaleString('he-IL')})</strong>`;
+
+                pill.addEventListener('mouseenter', () => {
+                    pill.style.background = 'rgba(var(--accent-gold-rgb), 0.15)';
+                    pill.style.borderColor = 'var(--accent-gold)';
+                });
+                pill.addEventListener('mouseleave', () => {
+                    pill.style.background = 'var(--bg-card)';
+                    pill.style.borderColor = 'var(--border-gold)';
+                });
+
+                pill.addEventListener('click', () => {
+                    const wordSearchInput = document.getElementById('word-search-input');
+                    if (wordSearchInput) {
+                        wordSearchInput.value = item.word;
+                        switchView('word-repetition-view');
+                        document.querySelectorAll('.nav-link').forEach(link => {
+                            if (link.getAttribute('data-target') === 'word-repetition-view') {
+                                link.classList.add('active');
+                            } else {
+                                link.classList.remove('active');
+                            }
+                        });
+                        wordSearchInput.dispatchEvent(new Event('input'));
+                    }
+                });
+
+                wordsList.appendChild(pill);
+            });
+
+            groupCard.appendChild(wordsList);
+            container.appendChild(groupCard);
+        });
+
+        return matches.length;
     }
 
     // Render a verse list into a container
@@ -4048,6 +4164,14 @@ function initRasheiTeivot() {
             renderVerseList(document.getElementById('rt-list-gematria-sofei'), gemartriaSofeiMatches);
             updateTabCount('gematria-sofei', gemartriaSofeiMatches.length);
 
+            // 9. Words anagram from rashei
+            const wordsRasheiCount = renderWordsAnagramList(document.getElementById('rt-list-words-anagram-rashei'), rashei);
+            updateTabCount('words-anagram-rashei', wordsRasheiCount);
+
+            // 10. Words anagram from sofei
+            const wordsSofeiCount = renderWordsAnagramList(document.getElementById('rt-list-words-anagram-sofei'), sofei);
+            updateTabCount('words-anagram-sofei', wordsSofeiCount);
+
         }, 400); // 400ms debounce to avoid lag while typing
     });
 
@@ -4060,7 +4184,9 @@ function initRasheiTeivot() {
                 'anagram-rashei': '5. אנגרמת ראשי תיבות',
                 'anagram-sofei': '6. אנגרמת סופי תיבות',
                 'gematria-rashei': '7. גימטריה ראשי תיבות',
-                'gematria-sofei': '8. גימטריה סופי תיבות'
+                'gematria-sofei': '8. גימטריה סופי תיבות',
+                'words-anagram-rashei': '9. הרכבת מילים מראשי תיבות',
+                'words-anagram-sofei': '10. הרכבת מילים מסופי תיבות'
             };
             tab.textContent = `${labels[tabName]} (${count})`;
         }
@@ -4185,15 +4311,26 @@ function initUnifiedAnalysis() {
     const sofitMap = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
     function toRegularLetter(ch) { return sofitMap[ch] || ch; }
     function getRasheiLocal(txt) {
-        const clean = stripNikud(txt).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
-        return clean ? clean.split(' ').map(w => w ? w[0] : '').join('') : '';
+        const clean = txt
+            .replace(/[\u0591-\u05C7]/g, '')
+            .replace(/[\u05BE\u05F3\u05F4\u200D\u200C]/g, ' ')
+            .replace(/[^\u05D0-\u05EA\s]/g, '')
+            .replace(/\s+/g, ' ').trim();
+        return clean ? clean.split(' ').filter(w => w.length > 0).map(w => w[0]).join('') : '';
     }
     function getSofeiLocal(txt) {
-        const clean = stripNikud(txt).replace(/[^א-ת\s]/g, '').replace(/\s+/g, ' ').trim();
-        return clean ? clean.split(' ').map(w => w ? toRegularLetter(w[w.length - 1]) : '').join('') : '';
+        const clean = txt
+            .replace(/[\u0591-\u05C7]/g, '')
+            .replace(/[\u05BE\u05F3\u05F4\u200D\u200C]/g, ' ')
+            .replace(/[^\u05D0-\u05EA\s]/g, '')
+            .replace(/\s+/g, ' ').trim();
+        return clean ? clean.split(' ').filter(w => w.length > 0).map(w => toRegularLetter(w[w.length - 1])).join('') : '';
     }
+    function sortLettersLocal(str) { return str.split('').sort().join(''); }
     function ensureCacheLocal() {
-        if (State.rtCache && State.rtCache.length === State.tanakhVerses.length) return;
+        const CACHE_VER = 2;
+        if (State.rtCache && State.rtCache.length === State.tanakhVerses.length && State.rtCacheVersion === CACHE_VER) return;
+        State.rtCacheVersion = CACHE_VER;
         State.rtCache = State.tanakhVerses.map(v => {
             const r = getRasheiLocal(v.originalText);
             const s = getSofeiLocal(v.originalText);
@@ -4201,6 +4338,8 @@ function initUnifiedAnalysis() {
                 verse: v,
                 rashei: r,
                 sofei: s,
+                rasheiSorted: sortLettersLocal(r),
+                sofeiSorted: sortLettersLocal(s),
                 rasheiGematria: calculateGematria(r),
                 sofeiGematria: calculateGematria(s)
             };
@@ -4956,6 +5095,80 @@ function initMultiVerseGematria() {
     const sortCountBtn = document.getElementById('sort-books-count');
 
     if (!input || !analyzeBtn) return;
+
+    // Chapter Auto-Loader Dropdowns
+    const mgBookSelect = document.getElementById('mg-book-select');
+    const mgChapterSelect = document.getElementById('mg-chapter-select');
+    const mgLoadBtn = document.getElementById('mg-load-chapter-btn');
+
+    if (mgBookSelect && mgChapterSelect && mgLoadBtn) {
+        // Populate book dropdown once
+        if (mgBookSelect.options.length <= 1 && typeof TanakhData !== 'undefined') {
+            const bookOrderMap = [
+                ["בראשית","Gen"],["שמות","Exod"],["ויקרא","Lev"],["במדבר","Num"],["דברים","Deut"],
+                ["יהושע","Josh"],["שופטים","Judg"],["שמואל א","1Sam"],["שמואל ב","2Sam"],
+                ["מלכים א","1Kgs"],["מלכים ב","2Kgs"],["ישעיהו","Isa"],["ירמיהו","Jer"],
+                ["יחזקאל","Ezek"],["הושע","Hos"],["יואל","Joel"],["עמוס","Amos"],
+                ["עובדיה","Obad"],["יונה","Jonah"],["מיכה","Mic"],["נחום","Nah"],
+                ["חבקוק","Hab"],["צפניה","Zeph"],["חגי","Hag"],["זכריה","Zech"],["מלאכי","Mal"],
+                ["תהילים","Ps"],["משלי","Prov"],["איוב","Job"],["שיר השירים","Song"],
+                ["רות","Ruth"],["איכה","Lam"],["קהלת","Eccl"],["אסתר","Esth"],
+                ["דניאל","Dan"],["עזרא","Ezra"],["נחמיה","Neh"],["דברי הימים א","1Chr"],["דברי הימים ב","2Chr"]
+            ];
+            bookOrderMap.forEach(([heb, rk]) => {
+                if (TanakhData[rk]) {
+                    const opt = document.createElement('option');
+                    opt.value = rk;
+                    opt.dataset.heb = heb;
+                    opt.textContent = heb;
+                    mgBookSelect.appendChild(opt);
+                }
+            });
+        }
+
+        mgBookSelect.addEventListener('change', () => {
+            const rk = mgBookSelect.value;
+            mgChapterSelect.innerHTML = '<option value="">-- בחר פרק --</option>';
+            mgChapterSelect.disabled = true;
+            mgLoadBtn.disabled = true;
+
+            if (rk && TanakhData[rk]) {
+                const numChapters = TanakhData[rk].length;
+                for (let c = 1; c <= numChapters; c++) {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = `פרק ${numberToHebrew(c)}`;
+                    mgChapterSelect.appendChild(opt);
+                }
+                mgChapterSelect.disabled = false;
+            }
+        });
+
+        mgChapterSelect.addEventListener('change', () => {
+            mgLoadBtn.disabled = !mgChapterSelect.value;
+        });
+
+        mgLoadBtn.addEventListener('click', () => {
+            const rk = mgBookSelect.value;
+            const cNum = parseInt(mgChapterSelect.value, 10);
+            const selectedOpt = mgBookSelect.options[mgBookSelect.selectedIndex];
+            const bookHeb = selectedOpt ? selectedOpt.dataset.heb : '';
+
+            if (!bookHeb || !cNum || !State.tanakhVerses) return;
+
+            // Filter verses for this book and chapter
+            const chapterVerses = State.tanakhVerses.filter(v => v.bookHeb === bookHeb && v.chapter === cNum);
+            if (chapterVerses.length === 0) return;
+
+            // Extract each verse onto its own line
+            const formattedText = chapterVerses.map(v => v.originalText).join('\n');
+            input.value = formattedText;
+
+            // Run analysis immediately
+            clearTimeout(multiDebounce);
+            runAnalysis();
+        });
+    }
 
     let currentSortMode = 'canonical'; // 'canonical' or 'count'
     let lastBookStats = null;
