@@ -3927,108 +3927,31 @@ function initRasheiTeivot() {
         console.timeEnd("RT Cache Build");
     }
 
-    // Render word anagram pills grouped by length
-    function renderWordsAnagramList(container, letterString) {
-        container.innerHTML = '';
-        if (!letterString) {
-            container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>אין אותיות לחישוב.</p></div>';
-            return 0;
-        }
+    // Show inline detail panel for a verse (in RT page)
+    function showRtDetailVerse(v) {
+        const panel = document.getElementById('rt-detail-panel');
+        const titleEl = document.getElementById('rt-detail-title');
+        const contentEl = document.getElementById('rt-detail-content');
+        if (!panel || !titleEl || !contentEl) return;
 
-        const counts = getHebrewLetterCounts(letterString);
-        const totalLetters = Object.values(counts).reduce((a, b) => a + b, 0);
-        if (totalLetters < 3) {
-            container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>נדרשות לפחות 3 אותיות להרכבת מילים.</p></div>';
-            return 0;
-        }
+        const r = getRashei(v.originalText);
+        const s = getSofei(v.originalText);
+        const gem = v.gematria || calculateGematria(v.originalText);
+        const sourceLabel = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)}`;
 
-        const corpus = ensureTanakhWordCorpus();
-        const matches = [];
-
-        for (let item of corpus) {
-            if (item.length >= 3 && item.length <= totalLetters) {
-                if (canFormWordFromCounts(item.normCounts, counts)) {
-                    matches.push(item);
-                }
-            }
-        }
-
-        if (matches.length === 0) {
-            container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>לא נמצאו מילים במאגר התנ"ך בנות 3 אותיות ומעלה שניתן להרכיב מאותיות אלו.</p></div>';
-            return 0;
-        }
-
-        // Group by length
-        const groupsByLength = {};
-        matches.forEach(item => {
-            if (!groupsByLength[item.length]) {
-                groupsByLength[item.length] = [];
-            }
-            groupsByLength[item.length].push(item);
-        });
-
-        const sortedLengths = Object.keys(groupsByLength).map(Number).sort((a, b) => b - a);
-
-        sortedLengths.forEach(len => {
-            const wordsInGroup = groupsByLength[len];
-            wordsInGroup.sort((a, b) => (b.count - a.count) || a.word.localeCompare(b.word, 'he'));
-
-            const groupCard = document.createElement('div');
-            groupCard.style.cssText = "background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1rem 1.25rem;";
-
-            const header = document.createElement('h4');
-            header.style.cssText = "color: var(--accent-gold); margin: 0 0 0.75rem 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center;";
-            header.innerHTML = `
-                <span><i class="fa-solid fa-font"></i> מילים בנות ${len} אותיות</span>
-                <span style="font-size: 0.85rem; background: rgba(var(--accent-gold-rgb), 0.18); color: var(--accent-gold); padding: 0.1rem 0.6rem; border-radius: 12px; font-weight: bold;">
-                    ${wordsInGroup.length} מילים
-                </span>
-            `;
-            groupCard.appendChild(header);
-
-            const wordsList = document.createElement('div');
-            wordsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; font-family: var(--font-sans);";
-
-            wordsInGroup.forEach(item => {
-                const pill = document.createElement('span');
-                pill.className = 'anagram-word-pill';
-                pill.title = `לחץ לחיפוש '${item.word}' במאגר הפסוקים`;
-                pill.style.cssText = "cursor: pointer; padding: 0.3rem 0.65rem; border: 1px solid var(--border-gold); background: var(--bg-card); border-radius: var(--border-radius-sm); font-size: 1rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem;";
-                pill.innerHTML = `<span>${item.word}</span> <strong style="color: var(--accent-gold); font-size: 0.85rem;">(${item.count.toLocaleString('he-IL')})</strong>`;
-
-                pill.addEventListener('mouseenter', () => {
-                    pill.style.background = 'rgba(var(--accent-gold-rgb), 0.15)';
-                    pill.style.borderColor = 'var(--accent-gold)';
-                });
-                pill.addEventListener('mouseleave', () => {
-                    pill.style.background = 'var(--bg-card)';
-                    pill.style.borderColor = 'var(--border-gold)';
-                });
-
-                pill.addEventListener('click', () => {
-                    const wordSearchInput = document.getElementById('word-search-input');
-                    if (wordSearchInput) {
-                        wordSearchInput.value = item.word;
-                        switchView('word-repetition-view');
-                        document.querySelectorAll('.nav-link').forEach(link => {
-                            if (link.getAttribute('data-target') === 'word-repetition-view') {
-                                link.classList.add('active');
-                            } else {
-                                link.classList.remove('active');
-                            }
-                        });
-                        wordSearchInput.dispatchEvent(new Event('input'));
-                    }
-                });
-
-                wordsList.appendChild(pill);
-            });
-
-            groupCard.appendChild(wordsList);
-            container.appendChild(groupCard);
-        });
-
-        return matches.length;
+        titleEl.innerHTML = `<i class="fa-solid fa-book-open"></i> פסוק: ${sourceLabel}`;
+        contentEl.innerHTML = `
+            <div style="font-family: var(--font-serif); font-size: 1.45rem; line-height: 1.8; text-align: center; margin-bottom: 1.25rem; padding: 1rem; border-right: 3px solid var(--border-gold); background: rgba(var(--accent-gold-rgb), 0.03);">
+                ${v.originalText}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.95rem; color: var(--text-muted);">
+                <span>גימטריה: <strong style="color: var(--accent-gold);">${gem}</strong></span>
+                <span>ראשי תיבות: <strong style="color: var(--accent-gold);">${r}</strong> (גימטריה: ${calculateGematria(r)})</span>
+                <span>סופי תיבות: <strong style="color: var(--accent-gold);">${s}</strong> (גימטריה: ${calculateGematria(s)})</span>
+            </div>
+        `;
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     // Render a verse list into a container
@@ -4053,16 +3976,7 @@ function initRasheiTeivot() {
             div.addEventListener('mouseenter', () => { div.style.color = 'var(--accent-gold)'; });
             div.addEventListener('mouseleave', () => { div.style.color = ''; });
             div.addEventListener('click', () => {
-                document.getElementById('edit-verse').value = `${v.bookHeb} ${v.chapter}, ${v.verse}`;
-                document.getElementById('edit-verse').dispatchEvent(new Event('blur'));
-                switchView('scribe-desk-view');
-                document.querySelectorAll('.nav-link').forEach(link => {
-                    if (link.getAttribute('data-target') === 'scribe-desk-view') {
-                        link.classList.add('active');
-                    } else {
-                        link.classList.remove('active');
-                    }
-                });
+                showRtDetailVerse(v);
             });
             const sourceLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
             // Show rashei/sofei of this verse inline
@@ -4193,6 +4107,341 @@ function initRasheiTeivot() {
     }
 }
 
+// --- Anagram Color Categorization Helpers (Global Scope) ---
+function normalizeForAnagram(str) {
+    if (!str) return '';
+    const sofitMap = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
+    return str
+        .replace(/[\u0591-\u05C7]/g, '')
+        .replace(/[\u05BE\u05F3\u05F4\u200D\u200C]/g, '')
+        .replace(/[^\u05D0-\u05EA]/g, '')
+        .split('')
+        .map(ch => sofitMap[ch] || ch)
+        .join('');
+}
+
+function isSubsequence(sub, str) {
+    let subIdx = 0;
+    for (let i = 0; i < str.length && subIdx < sub.length; i++) {
+        if (str[i] === sub[subIdx]) {
+            subIdx++;
+        }
+    }
+    return subIdx === sub.length;
+}
+
+function isNearSubsequence(word, source) {
+    if (word.length < 3) return false;
+    for (let i = 0; i < word.length; i++) {
+        const sub = word.slice(0, i) + word.slice(i + 1);
+        if (isSubsequence(sub, source)) return true;
+    }
+    return false;
+}
+
+function isNearContiguousForward(word, source) {
+    if (word.length < 3) return false;
+    // Check 1: removing 1 char from word leaves a contiguous substring in source
+    for (let i = 0; i < word.length; i++) {
+        const sub = word.slice(0, i) + word.slice(i + 1);
+        if (source.includes(sub)) return true;
+    }
+    // Check 2: contiguous substring of source of length (word.length + 1) matches word with 1 char removed
+    const wLen = word.length;
+    for (let i = 0; i <= source.length - (wLen + 1); i++) {
+        const sSub = source.slice(i, i + wLen + 1);
+        for (let j = 0; j < sSub.length; j++) {
+            const cand = sSub.slice(0, j) + sSub.slice(j + 1);
+            if (cand === word) return true;
+        }
+    }
+    return false;
+}
+
+function getAnagramCategory(word, sourceText) {
+    const S = normalizeForAnagram(sourceText);
+    const W = normalizeForAnagram(word);
+    if (!S || !W) return 'default';
+
+    const W_rev = W.split('').reverse().join('');
+
+    // 1. Gold (זהב): Exact contiguous substring forward
+    if (S.includes(W)) {
+        return 'gold';
+    }
+
+    // 2. Silver (כסף): Exact contiguous substring backward
+    if (S.includes(W_rev)) {
+        return 'silver';
+    }
+
+    // 3. Red (אדום): Subsequence forward (with gaps)
+    if (isSubsequence(W, S)) {
+        return 'red';
+    }
+
+    // 4. Pink (ורוד): Subsequence backward (with gaps)
+    if (isSubsequence(W_rev, S)) {
+        return 'pink';
+    }
+
+    // 5. Blue (כחול): Forward with 1 letter out of sequence (contiguous block minus 1 letter)
+    if (isNearContiguousForward(W, S)) {
+        return 'blue';
+    }
+
+    // 6. Green (ירוק): Backward with 1 letter out of sequence (contiguous block minus 1 letter)
+    if (isNearContiguousForward(W_rev, S)) {
+        return 'green';
+    }
+
+    // 7. Purple (סגול): Subsequence (forward or backward) with 1 letter out of sequence (with gaps)
+    if (isNearSubsequence(W, S) || isNearSubsequence(W_rev, S)) {
+        return 'purple';
+    }
+
+    return 'default';
+}
+
+function getAnagramCategoryStyle(category) {
+    switch (category) {
+        case 'gold':
+            return {
+                bg: '#fef08a',         // Soft Gold Yellow
+                border: '1px solid #eab308',
+                color: '#000000',      // Black text
+                countColor: '#b45309'  // Gold count
+            };
+        case 'silver':
+            return {
+                bg: '#e2e8f0',         // Silver Gray
+                border: '1px solid #94a3b8',
+                color: '#000000',
+                countColor: '#b45309'
+            };
+        case 'red':
+            return {
+                bg: '#fca5a5',         // Light Red
+                border: '1px solid #ef4444',
+                color: '#000000',
+                countColor: '#b45309'
+            };
+        case 'pink':
+            return {
+                bg: '#fbcfe8',         // Soft Pink
+                border: '1px solid #ec4899',
+                color: '#000000',
+                countColor: '#b45309'
+            };
+        case 'purple':
+            return {
+                bg: '#e9d5ff',         // Soft Purple
+                border: '1px solid #a855f7',
+                color: '#000000',
+                countColor: '#b45309'
+            };
+        case 'blue':
+            return {
+                bg: '#bfdbfe',         // Soft Blue
+                border: '1px solid #3b82f6',
+                color: '#000000',
+                countColor: '#b45309'
+            };
+        case 'green':
+            return {
+                bg: '#bbf7d0',         // Soft Green
+                border: '1px solid #22c55e',
+                color: '#000000',
+                countColor: '#b45309'
+            };
+        default:
+            return {
+                bg: '#f3f4f6',
+                border: '1px solid #cbd5e1',
+                color: '#000000',
+                countColor: '#b45309'
+            };
+    }
+}
+
+function getAnagramLegendHtml() {
+    return `
+        <div class="anagram-color-legend" style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem; font-family: var(--font-sans); font-size: 0.85rem;">
+            <div style="font-weight: bold; color: var(--accent-gold); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-palette"></i> מקרא סיווג צבעי המילים (ממוין לפי סדר חשיבות):
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center;">
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 14px; height: 14px; border-radius: 3px; background: #fef08a; border: 1px solid #eab308; display: inline-block;"></span>
+                    <strong style="color: #eab308;">זהב:</strong> אותיות ברצף מלא
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 14px; height: 14px; border-radius: 3px; background: #e2e8f0; border: 1px solid #94a3b8; display: inline-block;"></span>
+                    <strong style="color: #94a3b8;">כסף:</strong> אותיות ברצף (הפוך)
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 14px; height: 14px; border-radius: 3px; background: #fca5a5; border: 1px solid #ef4444; display: inline-block;"></span>
+                    <strong style="color: #ef4444;">אדום:</strong> אותיות כסדרן (עם דילוגים)
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 14px; height: 14px; border-radius: 3px; background: #fbcfe8; border: 1px solid #ec4899; display: inline-block;"></span>
+                    <strong style="color: #ec4899;">ורוד:</strong> אותיות כסדרן הפוך (דילוגים)
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 14px; height: 14px; border-radius: 3px; background: #bfdbfe; border: 1px solid #3b82f6; display: inline-block;"></span>
+                    <strong style="color: #3b82f6;">כחול:</strong> ברצף מלבד אות אחת
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 14px; height: 14px; border-radius: 3px; background: #bbf7d0; border: 1px solid #22c55e; display: inline-block;"></span>
+                    <strong style="color: #22c55e;">ירוק:</strong> ברצף הפוך מלבד אות אחת
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 14px; height: 14px; border-radius: 3px; background: #e9d5ff; border: 1px solid #a855f7; display: inline-block;"></span>
+                    <strong style="color: #a855f7;">סגול:</strong> כסדרן/הפוך (דילוגים) מלבד אות אחת
+                </span>
+            </div>
+        </div>
+    `;
+}
+
+// Render word anagram pills grouped by length
+function renderWordsAnagramList(container, letterString) {
+    container.innerHTML = '';
+    if (!letterString) {
+        container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>אין אותיות לחישוב.</p></div>';
+        return 0;
+    }
+
+    const counts = getHebrewLetterCounts(letterString);
+    const totalLetters = Object.values(counts).reduce((a, b) => a + b, 0);
+    if (totalLetters < 3) {
+        container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>נדרשות לפחות 3 אותיות להרכבת מילים.</p></div>';
+        return 0;
+    }
+
+    const corpus = ensureTanakhWordCorpus();
+    const matches = [];
+
+    for (let item of corpus) {
+        if (item.length >= 3 && item.length <= totalLetters) {
+            if (canFormWordFromCounts(item.normCounts, counts)) {
+                matches.push(item);
+            }
+        }
+    }
+
+    if (matches.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>לא נמצאו מילים במאגר התנ"ך בנות 3 אותיות ומעלה שניתן להרכיב מאותיות אלו.</p></div>';
+        return 0;
+    }
+
+    // Add legend at top of container
+    const legendDiv = document.createElement('div');
+    legendDiv.innerHTML = getAnagramLegendHtml();
+    container.appendChild(legendDiv.firstElementChild);
+
+    // Group by length
+    const groupsByLength = {};
+    matches.forEach(item => {
+        if (!groupsByLength[item.length]) {
+            groupsByLength[item.length] = [];
+        }
+        groupsByLength[item.length].push(item);
+    });
+
+    const sortedLengths = Object.keys(groupsByLength).map(Number).sort((a, b) => b - a);
+
+    const categoryRank = {
+        'gold': 1,
+        'silver': 2,
+        'red': 3,
+        'pink': 4,
+        'blue': 5,
+        'green': 6,
+        'purple': 7,
+        'default': 8
+    };
+
+    sortedLengths.forEach(len => {
+        const wordsInGroup = groupsByLength[len];
+        
+        // Sort words within group: category rank first, then occurrence count descending, then alphabetical
+        wordsInGroup.sort((a, b) => {
+            const catA = getAnagramCategory(a.word, letterString);
+            const catB = getAnagramCategory(b.word, letterString);
+            const rankA = categoryRank[catA] || 9;
+            const rankB = categoryRank[catB] || 9;
+
+            if (rankA !== rankB) {
+                return rankA - rankB;
+            }
+            if (b.count !== a.count) {
+                return b.count - a.count;
+            }
+            return a.word.localeCompare(b.word, 'he');
+        });
+
+        const groupCard = document.createElement('div');
+        groupCard.style.cssText = "background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1rem 1.25rem; margin-bottom: 1rem;";
+
+        const header = document.createElement('h4');
+        header.style.cssText = "color: var(--accent-gold); margin: 0 0 0.75rem 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center;";
+        header.innerHTML = `
+            <span><i class="fa-solid fa-font"></i> מילים בנות ${len} אותיות</span>
+            <span style="font-size: 0.85rem; background: rgba(var(--accent-gold-rgb), 0.18); color: var(--accent-gold); padding: 0.1rem 0.6rem; border-radius: 12px; font-weight: bold;">
+                ${wordsInGroup.length} מילים
+            </span>
+        `;
+        groupCard.appendChild(header);
+
+        const wordsList = document.createElement('div');
+        wordsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; font-family: var(--font-sans);";
+
+        wordsInGroup.forEach(item => {
+            const category = getAnagramCategory(item.word, letterString);
+            const st = getAnagramCategoryStyle(category);
+
+            const pill = document.createElement('span');
+            pill.className = 'anagram-word-pill';
+            pill.title = `לחץ לחיפוש '${item.word}' במאגר הפסוקים`;
+            pill.style.cssText = `cursor: pointer; padding: 0.35rem 0.7rem; border: ${st.border}; background: ${st.bg}; color: ${st.color}; border-radius: var(--border-radius-sm); font-size: 1.05rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600;`;
+            pill.innerHTML = `<span>${item.word}</span> <strong style="color: ${st.countColor}; font-size: 0.9rem; font-weight: 800;">(${item.count.toLocaleString('he-IL')})</strong>`;
+
+            pill.addEventListener('mouseenter', () => {
+                pill.style.transform = 'translateY(-1px)';
+                pill.style.boxShadow = '0 3px 10px rgba(0,0,0,0.3)';
+            });
+            pill.addEventListener('mouseleave', () => {
+                pill.style.transform = 'none';
+                pill.style.boxShadow = 'none';
+            });
+
+            pill.addEventListener('click', () => {
+                const wordSearchInput = document.getElementById('word-search-input');
+                if (wordSearchInput) {
+                    wordSearchInput.value = item.word;
+                    switchView('word-repetition-view');
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        if (link.getAttribute('data-target') === 'word-repetition-view') {
+                            link.classList.add('active');
+                        } else {
+                            link.classList.remove('active');
+                        }
+                    });
+                    wordSearchInput.dispatchEvent(new Event('input'));
+                }
+            });
+
+            wordsList.appendChild(pill);
+        });
+
+        groupCard.appendChild(wordsList);
+        container.appendChild(groupCard);
+    });
+
+    return matches.length;
+}
+
 // --- Auto Verse Analysis ---
 function runAutoAnalysis(text, containerId) {
     const box = document.getElementById(containerId);
@@ -4240,7 +4489,7 @@ function runAutoAnalysis(text, containerId) {
         const regex = new RegExp('(^|[^א-ת])' + gram + '($|[^א-ת])');
         const count = State.tanakhVerses.filter(v => regex.test(v.cleanText)).length;
         if (count >= 2 && count <= 6) {
-            repHtml += `<span style="padding: 0.3rem 0.6rem; border-radius: 4px; background: #ffe3e3; border: 2px solid #ff8787; font-weight: 900; color: #c92a2a; margin: 0.2rem; display: inline-block; cursor: pointer;" title="מופיע ${count} פעמים בתנ״ך" onclick="document.querySelector('[data-target=\\'word-repetition-view\\']').click(); setTimeout(()=> { document.getElementById('word-search-input').value = '${gram}'; document.getElementById('word-search-input').dispatchEvent(new Event('input')); }, 100);">${gram} (${count})</span>`;
+            repHtml += `<span style="padding: 0.3rem 0.6rem; border-radius: 4px; background: #ffe3e3; border: 2px solid #ff8787; font-weight: 900; color: #c92a2a; margin: 0.2rem; display: inline-block; cursor: pointer;" title="מופיע ${count} פעמים בתנ״ך" onclick="if(window.showUvaDetailQuery){showUvaDetailQuery('${gram}');}else{document.querySelector('[data-target=\\'word-repetition-view\\']').click();setTimeout(()=>{document.getElementById('word-search-input').value='${gram}';document.getElementById('word-search-input').dispatchEvent(new Event('input'));},100);}">${gram} (${count})</span>`;
         }
     });
     
@@ -4406,7 +4655,7 @@ function initUnifiedAnalysis() {
         panel.scrollIntoView({ behavior: 'smooth' });
     }
 
-    function showUvaDetailQuery(query) {
+    window.showUvaDetailQuery = function showUvaDetailQuery(query) {
         const panel = document.getElementById('uva-detail-panel');
         const titleEl = document.getElementById('uva-detail-title');
         const contentEl = document.getElementById('uva-detail-content');
@@ -4684,6 +4933,20 @@ function initUnifiedAnalysis() {
                 document.getElementById('uva-rt-cnt-es').textContent = `(${exactSofei.length})`;
                 renderRTMatches('uva-rt-panel-exact-sofei', exactSofei);
 
+                // Anagram Rashei
+                const rasheiSorted = sortLettersLocal(rashei);
+                const anagramRashei = State.rtCache.filter(c => c.rasheiSorted === rasheiSorted && c.rashei !== rashei);
+                const cntAr = document.getElementById('uva-rt-cnt-ar');
+                if (cntAr) cntAr.textContent = `(${anagramRashei.length})`;
+                renderRTMatches('uva-rt-panel-anagram-rashei', anagramRashei);
+
+                // Anagram Sofei
+                const sofeiSorted = sortLettersLocal(sofei);
+                const anagramSofei = State.rtCache.filter(c => c.sofeiSorted === sofeiSorted && c.sofei !== sofei);
+                const cntAs = document.getElementById('uva-rt-cnt-as');
+                if (cntAs) cntAs.textContent = `(${anagramSofei.length})`;
+                renderRTMatches('uva-rt-panel-anagram-sofei', anagramSofei);
+
                 // Gematria Rashei
                 const gemRashei = State.rtCache.filter(c => c.rasheiGematria === rasheiGem);
                 document.getElementById('uva-rt-cnt-gr').textContent = `(${gemRashei.length})`;
@@ -4693,6 +4956,22 @@ function initUnifiedAnalysis() {
                 const gemSofei = State.rtCache.filter(c => c.sofeiGematria === sofeiGem);
                 document.getElementById('uva-rt-cnt-gs').textContent = `(${gemSofei.length})`;
                 renderRTMatches('uva-rt-panel-gem-sofei', gemSofei);
+
+                // Words Rashei
+                const wordsRasheiPanel = document.getElementById('uva-rt-panel-words-rashei');
+                if (wordsRasheiPanel) {
+                    const cntWr = renderWordsAnagramList(wordsRasheiPanel, rashei);
+                    const cntWrEl = document.getElementById('uva-rt-cnt-wr');
+                    if (cntWrEl) cntWrEl.textContent = `(${cntWr})`;
+                }
+
+                // Words Sofei
+                const wordsSofeiPanel = document.getElementById('uva-rt-panel-words-sofei');
+                if (wordsSofeiPanel) {
+                    const cntWs = renderWordsAnagramList(wordsSofeiPanel, sofei);
+                    const cntWsEl = document.getElementById('uva-rt-cnt-ws');
+                    if (cntWsEl) cntWsEl.textContent = `(${cntWs})`;
+                }
             }
 
         }, 400);
@@ -4812,14 +5091,6 @@ function syncSharedVerseAndRenderHistories(targetId) {
             }
         }
         renderHistoryPanel('unified', 'unified-history-list');
-    } else if (targetId === 'anagram-finder-view') {
-        const inp = document.getElementById('anagram-input');
-        if (inp) {
-            if (State.sharedVerse && inp.value !== State.sharedVerse) {
-                inp.value = State.sharedVerse;
-                inp.dispatchEvent(new Event('input'));
-            }
-        }
         renderHistoryPanel('anagram', 'anagram-history-list');
     }
 }
@@ -4913,9 +5184,6 @@ function initAnagramFinder() {
             return;
         }
 
-        // Sync shared verse
-        State.sharedVerse = rawInput;
-        localStorage.setItem('torah_shared_verse', rawInput);
 
         // Clean input letters: keep Hebrew letters only
         const cleanLetters = stripNikud(rawInput).replace(/[^א-ת]/g, "");
@@ -4992,16 +5260,46 @@ function initAnagramFinder() {
 
         // 4. Render length groups from longest to shortest
         lengthGroupsContainer.innerHTML = "";
+
+        // Add legend at top of length groups
+        const legendDiv = document.createElement('div');
+        legendDiv.innerHTML = getAnagramLegendHtml();
+        lengthGroupsContainer.appendChild(legendDiv.firstElementChild);
+
+        const categoryRank = {
+            'gold': 1,
+            'silver': 2,
+            'red': 3,
+            'pink': 4,
+            'blue': 5,
+            'green': 6,
+            'purple': 7,
+            'default': 8
+        };
+
         const sortedLengths = Object.keys(groupsByLength).map(Number).sort((a, b) => b - a);
 
         sortedLengths.forEach(len => {
             const wordsInGroup = groupsByLength[len];
-            // Sort words within group: highest occurrence count first, then alphabetical
-            wordsInGroup.sort((a, b) => (b.count - a.count) || a.word.localeCompare(b.word, 'he'));
+            // Sort words within group: category rank first, then highest occurrence count first, then alphabetical
+            wordsInGroup.sort((a, b) => {
+                const catA = getAnagramCategory(a.word, rawInput);
+                const catB = getAnagramCategory(b.word, rawInput);
+                const rankA = categoryRank[catA] || 9;
+                const rankB = categoryRank[catB] || 9;
+
+                if (rankA !== rankB) {
+                    return rankA - rankB;
+                }
+                if (b.count !== a.count) {
+                    return b.count - a.count;
+                }
+                return a.word.localeCompare(b.word, 'he');
+            });
 
             const groupCard = document.createElement('div');
             groupCard.className = 'anagram-length-group';
-            groupCard.style.cssText = "background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1.25rem 1.5rem;";
+            groupCard.style.cssText = "background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1.25rem 1.5rem; margin-bottom: 1rem;";
 
             const header = document.createElement('h3');
             header.style.cssText = "color: var(--accent-gold); margin: 0 0 1rem 0; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;";
@@ -5017,37 +5315,50 @@ function initAnagramFinder() {
             wordsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; font-family: var(--font-sans);";
 
             wordsInGroup.forEach(item => {
+                const category = getAnagramCategory(item.word, rawInput);
+                const st = getAnagramCategoryStyle(category);
+
                 const pill = document.createElement('span');
                 pill.className = 'anagram-word-pill';
                 pill.title = `לחץ לחיפוש '${item.word}' במאגר הפסוקים`;
-                pill.style.cssText = "cursor: pointer; padding: 0.35rem 0.75rem; border: 1px solid var(--border-gold); background: var(--bg-card); border-radius: var(--border-radius-sm); font-size: 1.05rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;";
-                pill.innerHTML = `<span>${item.word}</span> <strong style="color: var(--accent-gold); font-size: 0.9rem;">(${item.count.toLocaleString('he-IL')})</strong>`;
+                pill.style.cssText = `cursor: pointer; padding: 0.35rem 0.75rem; border: ${st.border}; background: ${st.bg}; color: ${st.color}; border-radius: var(--border-radius-sm); font-size: 1.05rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500;`;
+                pill.innerHTML = `<span>${item.word}</span> <strong style="color: ${st.countColor}; font-size: 0.9rem;">(${item.count.toLocaleString('he-IL')})</strong>`;
 
                 pill.addEventListener('mouseenter', () => {
-                    pill.style.background = 'rgba(var(--accent-gold-rgb), 0.15)';
-                    pill.style.borderColor = 'var(--accent-gold)';
+                    pill.style.transform = 'translateY(-1px)';
+                    pill.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
                 });
                 pill.addEventListener('mouseleave', () => {
-                    pill.style.background = 'var(--bg-card)';
-                    pill.style.borderColor = 'var(--border-gold)';
+                    pill.style.transform = 'none';
+                    pill.style.boxShadow = 'none';
                 });
 
                 pill.addEventListener('click', () => {
-                    // Switch to word repetition / concordance view to show all occurrences
-                    const wordSearchInput = document.getElementById('word-search-input');
-                    if (wordSearchInput) {
-                        wordSearchInput.value = item.word;
-                        switchView('word-repetition-view');
-                        // Highlight nav tab
-                        document.querySelectorAll('.nav-link').forEach(link => {
-                            if (link.getAttribute('data-target') === 'word-repetition-view') {
-                                link.classList.add('active');
-                            } else {
-                                link.classList.remove('active');
-                            }
+                    // Show occurrences inline in anagram-detail-panel
+                    const panel = document.getElementById('anagram-detail-panel');
+                    const titleEl = document.getElementById('anagram-detail-title');
+                    const contentEl = document.getElementById('anagram-detail-content');
+                    if (!panel || !titleEl || !contentEl) return;
+
+                    titleEl.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> פסוקים המכילים את המילה: <strong>${item.word}</strong> (${item.count} מופעים)`;
+
+                    const regex = new RegExp('(^|[^א-ת])' + item.word + '($|[^א-ת])');
+                    const matches = State.tanakhVerses.filter(v => regex.test(v.cleanText));
+
+                    if (matches.length === 0) {
+                        contentEl.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:1rem;">לא נמצאו פסוקים.</div>`;
+                    } else {
+                        const limit = 50;
+                        let html = `<div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.75rem;">מציג ${Math.min(matches.length, limit)} מתוך ${matches.length} פסוקים:</div>`;
+                        matches.slice(0, limit).forEach(v => {
+                            const srcLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+                            html += `<div style="padding:0.4rem 0; border-bottom:1px solid var(--border-color);">${v.originalText} <span style="color:var(--accent-gold); font-size:0.85rem; font-family:var(--font-sans);">${srcLabel}</span></div>`;
                         });
-                        wordSearchInput.dispatchEvent(new Event('input'));
+                        contentEl.innerHTML = html;
                     }
+
+                    panel.style.display = 'block';
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 });
 
                 wordsList.appendChild(pill);

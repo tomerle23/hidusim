@@ -642,6 +642,16 @@
                             <h3 style="font-size: 1.1rem; color: var(--accent-gold); margin-bottom: 0.75rem;"><i class="fa-solid fa-shapes"></i> מילים בתנ"ך שניתן להרכיב מאותיות סופי התיבות</h3>
                             <div id="rt-list-words-anagram-sofei" style="display: flex; flex-direction: column; gap: 1.25rem;"></div>
                         </div>
+
+                        <!-- Inline verse detail panel -->
+                        <div id="rt-detail-panel" style="display:none; margin-top: 1.5rem; background: var(--bg-primary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                                <h3 id="rt-detail-title" style="color: var(--accent-gold); margin: 0; font-size: 1.2rem;"></h3>
+                                <button onclick="document.getElementById('rt-detail-panel').style.display='none';" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.25rem 0.65rem; border-radius: var(--border-radius-sm); cursor: pointer; font-size: 1.1rem;">✕</button>
+                            </div>
+                            <div id="rt-detail-content" style="font-family: var(--font-serif); font-size: 1.15rem; line-height: 1.8;"></div>
+                        </div>
+
                     </div>
                 </div>
                 </div><!-- /page-with-history -->
@@ -834,6 +844,15 @@
                             <div id="anagram-length-groups" style="display: flex; flex-direction: column; gap: 1.5rem;">
                                 <!-- Length groups will be rendered here dynamically -->
                             </div>
+                        </div>
+
+                        <!-- Inline word detail panel -->
+                        <div id="anagram-detail-panel" style="display:none; margin-top: 2rem; background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                                <h3 id="anagram-detail-title" style="color: var(--accent-gold); margin: 0; font-size: 1.2rem;"></h3>
+                                <button onclick="document.getElementById('anagram-detail-panel').style.display='none';" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.25rem 0.65rem; border-radius: var(--border-radius-sm); cursor: pointer; font-size: 1.1rem;">✕</button>
+                            </div>
+                            <div id="anagram-detail-content" style="font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.8; max-height: 400px; overflow-y: auto;"></div>
                         </div>
                     </div>
                 </div>
