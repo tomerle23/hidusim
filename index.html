@@ -682,8 +682,8 @@
                     <!-- Results (hidden until input) -->
                     <div id="uva-results" style="display: none;">
 
-                        <!-- Grid of 3 columns on desktop -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; align-items: start;">
+                        <!-- Grid layout: 2 columns top (Gematria + Repetition), full width bottom (Rashei/Sofei Teivot) -->
+                        <div class="uva-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; align-items: start;">
 
                             <!-- === COLUMN 1: GEMATRIA === -->
                             <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
@@ -735,47 +735,52 @@
                                 </div>
                             </div>
 
-                            <!-- === COLUMN 3: RASHEI / SOFEI TEIVOT === -->
-                            <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
-                                <h3 style="color: var(--accent-gold); margin: 0 0 1rem 0; font-size: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <!-- === COLUMN 3+4: RASHEI / SOFEI TEIVOT (FULL WIDTH) === -->
+                            <div class="uva-rt-fullwidth" style="grid-column: 1 / -1; background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem;">
+                                <h3 style="color: var(--accent-gold); margin: 0 0 1rem 0; font-size: 1.35rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
                                     <i class="fa-solid fa-spell-check"></i> ראשי וסופי תיבות
                                 </h3>
-                                <!-- Rashei -->
-                                <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
-                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem;"><i class="fa-solid fa-arrow-right"></i> ראשי תיבות</div>
-                                    <div style="display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap;">
-                                        <span id="uva-rt-rashei" style="font-size: 1.5rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
-                                        <span style="font-size: 0.9rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-rashei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
+                                
+                                <!-- Rashei & Sofei summary boxes side by side -->
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+                                    <!-- Rashei -->
+                                    <div style="padding: 0.85rem 1.25rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+                                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.35rem;"><i class="fa-solid fa-arrow-right"></i> ראשי תיבות</div>
+                                        <div style="display: flex; gap: 1.25rem; align-items: baseline; flex-wrap: wrap;">
+                                            <span id="uva-rt-rashei" style="font-size: 1.6rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
+                                            <span style="font-size: 0.95rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-rashei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
+                                        </div>
+                                    </div>
+                                    <!-- Sofei -->
+                                    <div style="padding: 0.85rem 1.25rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+                                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.35rem;"><i class="fa-solid fa-arrow-left"></i> סופי תיבות</div>
+                                        <div style="display: flex; gap: 1.25rem; align-items: baseline; flex-wrap: wrap;">
+                                            <span id="uva-rt-sofei" style="font-size: 1.6rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
+                                            <span style="font-size: 0.95rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-sofei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
+                                        </div>
                                     </div>
                                 </div>
-                                <!-- Sofei -->
-                                <div style="margin-bottom: 1.25rem; padding: 0.75rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
-                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem;"><i class="fa-solid fa-arrow-left"></i> סופי תיבות</div>
-                                    <div style="display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap;">
-                                        <span id="uva-rt-sofei" style="font-size: 1.5rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
-                                        <span style="font-size: 0.9rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-sofei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
-                                    </div>
-                                </div>
+
                                 <!-- Tabs for RT matches -->
-                                <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.75rem;">
-                                    <button class="uva-rt-tab category-tab active" data-uva-rt-tab="exact-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">3. ראשי זהה <span id="uva-rt-cnt-er">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="exact-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">4. סופי זהה <span id="uva-rt-cnt-es">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="anagram-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">5. אנגרמת ראשי <span id="uva-rt-cnt-ar">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="anagram-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">6. אנגרמת סופי <span id="uva-rt-cnt-as">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">7. גימטריית ראשי <span id="uva-rt-cnt-gr">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">8. גימטריית סופי <span id="uva-rt-cnt-gs">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="words-rashei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">9. מילים מראשי <span id="uva-rt-cnt-wr">(0)</span></button>
-                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="words-sofei" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">10. מילים מסופי <span id="uva-rt-cnt-ws">(0)</span></button>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem;">
+                                    <button class="uva-rt-tab category-tab active" data-uva-rt-tab="exact-rashei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">3. ראשי זהה <span id="uva-rt-cnt-er">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="exact-sofei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">4. סופי זהה <span id="uva-rt-cnt-es">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="anagram-rashei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">5. אנגרמת ראשי <span id="uva-rt-cnt-ar">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="anagram-sofei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">6. אנגרמת סופי <span id="uva-rt-cnt-as">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-rashei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">7. גימטריית ראשי <span id="uva-rt-cnt-gr">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="gem-sofei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">8. גימטריית סופי <span id="uva-rt-cnt-gs">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="words-rashei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">9. מילים מראשי <span id="uva-rt-cnt-wr">(0)</span></button>
+                                    <button class="uva-rt-tab category-tab" data-uva-rt-tab="words-sofei" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">10. מילים מסופי <span id="uva-rt-cnt-ws">(0)</span></button>
                                 </div>
                                 <!-- Panels -->
-                                <div id="uva-rt-panel-exact-rashei" class="uva-rt-panel" style="display:block; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-exact-sofei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-anagram-rashei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-anagram-sofei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-gem-rashei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-gem-sofei" class="uva-rt-panel" style="display:none; max-height: 240px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.6;"></div>
-                                <div id="uva-rt-panel-words-rashei" class="uva-rt-panel" style="display:none; max-height: 320px; overflow-y: auto;"></div>
-                                <div id="uva-rt-panel-words-sofei" class="uva-rt-panel" style="display:none; max-height: 320px; overflow-y: auto;"></div>
+                                <div id="uva-rt-panel-exact-rashei" class="uva-rt-panel" style="display:block; max-height: 350px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.7;"></div>
+                                <div id="uva-rt-panel-exact-sofei" class="uva-rt-panel" style="display:none; max-height: 350px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.7;"></div>
+                                <div id="uva-rt-panel-anagram-rashei" class="uva-rt-panel" style="display:none; max-height: 350px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.7;"></div>
+                                <div id="uva-rt-panel-anagram-sofei" class="uva-rt-panel" style="display:none; max-height: 350px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.7;"></div>
+                                <div id="uva-rt-panel-gem-rashei" class="uva-rt-panel" style="display:none; max-height: 350px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.7;"></div>
+                                <div id="uva-rt-panel-gem-sofei" class="uva-rt-panel" style="display:none; max-height: 350px; overflow-y: auto; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.7;"></div>
+                                <div id="uva-rt-panel-words-rashei" class="uva-rt-panel" style="display:none; max-height: 420px; overflow-y: auto;"></div>
+                                <div id="uva-rt-panel-words-sofei" class="uva-rt-panel" style="display:none; max-height: 420px; overflow-y: auto;"></div>
                             </div>
 
                         </div>
