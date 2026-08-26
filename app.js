@@ -137,6 +137,46 @@ function findInsightByCoordinate(bookHeb, chapterNum, verseNum) {
     });
 }
 
+// --- Helper: Copy Plain Text Without Formatting ---
+window.copyPlainText = function(text, btnElement) {
+    if (!text) return;
+    
+    function onSuccess() {
+        if (!btnElement) return;
+        const origContent = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fa-solid fa-check" style="color: #22c55e;"></i> הועתק!';
+        btnElement.style.borderColor = '#22c55e';
+        setTimeout(() => {
+            btnElement.innerHTML = origContent;
+            btnElement.style.borderColor = '';
+        }, 1800);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallbackCopy(text));
+    } else {
+        fallbackCopy(text);
+    }
+
+    function fallbackCopy(str) {
+        const ta = document.createElement('textarea');
+        ta.value = str;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            onSuccess();
+        } catch (e) {
+            console.error('Copy plain text failed', e);
+        }
+        document.body.removeChild(ta);
+    }
+};
+
 // --- Helper: Parse Search Query for Coordinate Matching ---
 function parseSearchQueryReference(query) {
     if (!query) return null;
@@ -1988,18 +2028,31 @@ function initGematriaCalculator() {
                         detailGrid.innerHTML = "";
                         
                         if (matches.length > 0) {
+                            const topBar = document.createElement('div');
+                            topBar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;';
+
                             const limit = 50;
+                            const note = document.createElement('div');
+                            note.style.color = 'var(--accent-gold)';
+                            note.style.fontWeight = 'bold';
+                            note.style.fontSize = '1.05rem';
+                            note.innerText = matches.length > limit ? `נמצאו ${matches.length} פסוקים בגימטריה זו (מציג ${limit}):` : `נמצאו ${matches.length} פסוקים:`;
+                            topBar.appendChild(note);
+
+                            const copyBtn = document.createElement('button');
+                            copyBtn.type = 'button';
+                            copyBtn.className = 'category-tab';
+                            copyBtn.style.cssText = 'padding: 0.25rem 0.65rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;';
+                            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק פסוקים';
+                            copyBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                                window.copyPlainText(plainLines.join('\n'), copyBtn);
+                            });
+                            topBar.appendChild(copyBtn);
+                            detailGrid.appendChild(topBar);
+
                             const displayMatches = matches.slice(0, limit);
-                            if (matches.length > limit) {
-                                const note = document.createElement('div');
-                                note.style.textAlign = 'center';
-                                note.style.color = 'var(--accent-gold)';
-                                note.style.fontWeight = 'bold';
-                                note.style.marginBottom = '1rem';
-                                note.style.fontSize = '1.1rem';
-                                note.innerText = `נמצאו ${matches.length} פסוקים בגימטריה זו. מציג את 50 הראשונים:`;
-                                detailGrid.appendChild(note);
-                            }
                             
                             displayMatches.forEach(match => {
                                 const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
@@ -2063,20 +2116,31 @@ function initGematriaCalculator() {
         if (matches.length > 0) {
             matchesSection.style.display = 'block';
             
-            // Limit to first 50 results
+            const topBar = document.createElement('div');
+            topBar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;';
+
             const limit = 50;
+            const note = document.createElement('div');
+            note.style.color = 'var(--accent-gold)';
+            note.style.fontWeight = 'bold';
+            note.style.fontSize = '1.05rem';
+            note.innerText = matches.length > limit ? `נמצאו ${matches.length} פסוקים בגימטריה זו (מציג ${limit}):` : `נמצאו ${matches.length} פסוקים:`;
+            topBar.appendChild(note);
+
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'category-tab';
+            copyBtn.style.cssText = 'padding: 0.25rem 0.65rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;';
+            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק פסוקים';
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                window.copyPlainText(plainLines.join('\n'), copyBtn);
+            });
+            topBar.appendChild(copyBtn);
+            matchesGrid.appendChild(topBar);
+
             const displayMatches = matches.slice(0, limit);
-            
-            if (matches.length > limit) {
-                const note = document.createElement('div');
-                note.style.textAlign = 'center';
-                note.style.color = 'var(--accent-gold)';
-                note.style.fontWeight = 'bold';
-                note.style.marginBottom = '1rem';
-                note.style.fontSize = '1.1rem';
-                note.innerText = `נמצאו ${matches.length} פסוקים בגימטריה זו. מציג את 50 הראשונים:`;
-                matchesGrid.appendChild(note);
-            }
 
             displayMatches.forEach(match => {
                 const insightMatch = findInsightByCoordinate(match.bookHeb, match.chapter, match.verse);
@@ -2178,19 +2242,32 @@ function initWordRepetitionCalculator() {
         // Render matches
         matchesGrid.innerHTML = "";
 
-        // Show first 50 results to prevent DOM lag
         const limit = 50;
         const displayMatches = matches.slice(0, limit);
 
-        if (matches.length > limit) {
+        if (matches.length > 0) {
+            const topBar = document.createElement('div');
+            topBar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;';
+
             const note = document.createElement('div');
-            note.style.textAlign = 'center';
             note.style.color = 'var(--accent-gold)';
             note.style.fontWeight = 'bold';
-            note.style.marginBottom = '1rem';
-            note.style.fontSize = '1.1rem';
-            note.innerText = `נמצאו ${matches.length} תוצאות. מציג את 50 הראשונים:`;
-            matchesGrid.appendChild(note);
+            note.style.fontSize = '1.05rem';
+            note.innerText = matches.length > limit ? `נמצאו ${matches.length} תוצאות (מציג ${limit}):` : `נמצאו ${matches.length} תוצאות:`;
+            topBar.appendChild(note);
+
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'category-tab';
+            copyBtn.style.cssText = 'padding: 0.25rem 0.65rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;';
+            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק פסוקים';
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                window.copyPlainText(plainLines.join('\n'), copyBtn);
+            });
+            topBar.appendChild(copyBtn);
+            matchesGrid.appendChild(topBar);
         }
 
         if (displayMatches.length > 0) {
@@ -3939,7 +4016,21 @@ function initRasheiTeivot() {
         const gem = v.gematria || calculateGematria(v.originalText);
         const sourceLabel = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)}`;
 
-        titleEl.innerHTML = `<i class="fa-solid fa-book-open"></i> פסוק: ${sourceLabel}`;
+        titleEl.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span><i class="fa-solid fa-book-open"></i> פסוק: ${sourceLabel}</span>
+                <button type="button" class="category-tab rt-detail-copy-btn" style="padding: 0.2rem 0.6rem; font-size: 0.8rem; cursor: pointer; color: var(--accent-gold); border-color: var(--border-gold);">
+                    <i class="fa-solid fa-copy"></i> העתק
+                </button>
+            </div>
+        `;
+        const rtCopyBtn = titleEl.querySelector('.rt-detail-copy-btn');
+        if (rtCopyBtn) {
+            rtCopyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.copyPlainText(`${v.originalText} (${sourceLabel})`, rtCopyBtn);
+            });
+        }
         contentEl.innerHTML = `
             <div style="font-family: var(--font-serif); font-size: 1.45rem; line-height: 1.8; text-align: center; margin-bottom: 1.25rem; padding: 1rem; border-right: 3px solid var(--border-gold); background: rgba(var(--accent-gold-rgb), 0.03);">
                 ${v.originalText}
@@ -3962,12 +4053,32 @@ function initRasheiTeivot() {
             container.innerHTML = '<div class="empty-state" style="padding: 1.5rem 0;"><p>לא נמצאו פסוקים תואמים.</p></div>';
             return;
         }
-        if (items.length > limit) {
-            const note = document.createElement('div');
-            note.style.cssText = 'text-align: center; color: var(--accent-gold); font-weight: bold; margin-bottom: 1rem; font-size: 1.05rem;';
-            note.innerText = `נמצאו ${items.length} פסוקים. מציג את ${limit} הראשונים:`;
-            container.appendChild(note);
-        }
+
+        const topBar = document.createElement('div');
+        topBar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;';
+        
+        const note = document.createElement('div');
+        note.style.cssText = 'color: var(--accent-gold); font-weight: bold; font-size: 0.95rem;';
+        note.innerText = items.length > limit ? `נמצאו ${items.length} פסוקים (מציג ${limit}):` : `נמצאו ${items.length} פסוקים:`;
+        topBar.appendChild(note);
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'category-tab';
+        copyBtn.style.cssText = 'padding: 0.25rem 0.65rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;';
+        copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק פסוקים';
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const plainLines = items.map(item => {
+                const v = item.verse || item;
+                const src = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+                return `${v.originalText} ${src}`;
+            });
+            window.copyPlainText(plainLines.join('\n'), copyBtn);
+        });
+        topBar.appendChild(copyBtn);
+        container.appendChild(topBar);
+
         const display = items.slice(0, limit);
         display.forEach(item => {
             const v = item.verse || item;
@@ -4003,6 +4114,23 @@ function initRasheiTeivot() {
             if (targetPanel) targetPanel.style.display = 'block';
         });
     });
+
+    // Copy buttons for Rashei & Sofei letters
+    const copyRasheiBtn = document.getElementById('rt-copy-rashei-btn');
+    if (copyRasheiBtn) {
+        copyRasheiBtn.addEventListener('click', () => {
+            const txt = document.getElementById('rt-rashei-letters').textContent.trim();
+            window.copyPlainText(txt, copyRasheiBtn);
+        });
+    }
+
+    const copySofeiBtn = document.getElementById('rt-copy-sofei-btn');
+    if (copySofeiBtn) {
+        copySofeiBtn.addEventListener('click', () => {
+            const txt = document.getElementById('rt-sofei-letters').textContent.trim();
+            window.copyPlainText(txt, copySofeiBtn);
+        });
+    }
 
     // Debounce timer
     let debounceTimer = null;
@@ -4550,12 +4678,15 @@ function renderWordsAnagramList(container, letterString) {
         <div style="font-weight: bold; color: var(--accent-gold); font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
             <i class="fa-solid fa-arrow-down-a-z"></i> תצוגת סידור:
         </div>
-        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
             <button type="button" class="category-tab anagram-sort-btn-len ${sortMode === 'length' ? 'active' : ''}" style="padding: 0.25rem 0.65rem; font-size: 0.82rem;">
                 <i class="fa-solid fa-text-width"></i> לפי כמות אותיות
             </button>
             <button type="button" class="category-tab anagram-sort-btn-cat ${sortMode === 'category' ? 'active' : ''}" style="padding: 0.25rem 0.65rem; font-size: 0.82rem;">
                 <i class="fa-solid fa-palette"></i> לפי קטגוריות
+            </button>
+            <button type="button" class="category-tab anagram-copy-btn" style="padding: 0.25rem 0.65rem; font-size: 0.82rem; color: var(--accent-gold); border-color: var(--border-gold); margin-right: 0.35rem; cursor: pointer;">
+                <i class="fa-solid fa-copy"></i> העתק תוצאות
             </button>
         </div>
     `;
@@ -4601,6 +4732,43 @@ function renderWordsAnagramList(container, letterString) {
         sortMode = 'category';
         container._anagramSortMode = 'category';
         updateView();
+    });
+
+    controlsDiv.querySelector('.anagram-copy-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        let plainText = '';
+        if (sortMode === 'category') {
+            const groupsByCat = {};
+            ANAGRAM_CATEGORIES_CONFIG.forEach(c => { groupsByCat[c.key] = []; });
+            matches.forEach(it => {
+                const cat = getAnagramCategory(it.word, letterString);
+                if (!groupsByCat[cat]) groupsByCat[cat] = [];
+                groupsByCat[cat].push(it);
+            });
+            const sections = [];
+            ANAGRAM_CATEGORIES_CONFIG.forEach(catConfig => {
+                const list = groupsByCat[catConfig.key];
+                if (!list || list.length === 0) return;
+                const wordsStr = list.map(w => `${w.word} (${w.count})`).join(', ');
+                sections.push(`${catConfig.name} (${list.length} מילים):\n${wordsStr}`);
+            });
+            plainText = sections.join('\n\n');
+        } else {
+            const groupsByLength = {};
+            matches.forEach(it => {
+                if (!groupsByLength[it.length]) groupsByLength[it.length] = [];
+                groupsByLength[it.length].push(it);
+            });
+            const sortedLens = Object.keys(groupsByLength).map(Number).sort((a, b) => b - a);
+            const sections = [];
+            sortedLens.forEach(l => {
+                const list = groupsByLength[l];
+                const wordsStr = list.map(w => `${w.word} (${w.count})`).join(', ');
+                sections.push(`מילים בנות ${l} אותיות (${list.length} מילים):\n${wordsStr}`);
+            });
+            plainText = sections.join('\n\n');
+        }
+        window.copyPlainText(plainText, controlsDiv.querySelector('.anagram-copy-btn'));
     });
 
     updateView();
@@ -4682,7 +4850,10 @@ function runAutoAnalysis(text, containerId) {
         
         <!-- Gematria Auto -->
         <div style="margin-bottom: 1.5rem;">
-            <h4 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-calculator"></i> גימטריה: <span style="color: var(--accent-gold);">${gVal} (${numberToHebrew(gVal)})</span></h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h4 style="margin: 0;"><i class="fa-solid fa-calculator"></i> גימטריה: <span style="color: var(--accent-gold);">${gVal} (${numberToHebrew(gVal)})</span></h4>
+                ${gMatches.length > 0 ? `<button type="button" class="category-tab" onclick="const lines = State.tanakhVerses.filter(v => v.gematria === ${gVal}).map(v => v.originalText + ' (' + v.bookHeb + ' ' + numberToHebrew(v.chapter) + ',' + numberToHebrew(v.verse) + ')').join('\\n'); window.copyPlainText(lines, this);" style="padding: 0.2rem 0.55rem; font-size: 0.78rem; cursor: pointer; color: var(--accent-gold); border-color: var(--border-gold);"><i class="fa-solid fa-copy"></i> העתק פסוקים</button>` : ''}
+            </div>
             <div style="max-height: 200px; overflow-y: auto; background: var(--bg-secondary); padding: 1rem; border-radius: var(--border-radius-md); font-size: 0.9rem;">
                 ${gHtml}
             </div>
@@ -4702,13 +4873,19 @@ function runAutoAnalysis(text, containerId) {
         <div>
             <h4 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-spell-check"></i> ראשי וסופי תיבות</h4>
             <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--border-radius-md); font-size: 0.9rem;">
-                <div style="margin-bottom: 0.5rem;">
-                    <strong>ראשי תיבות:</strong> <span style="color:var(--accent-gold); font-size:1.1rem; font-weight:bold;">${rt}</span> 
-                    <span style="font-size:0.85rem; color:var(--text-muted);">(גימטריה: ${rtScore} | פסוקים זהים: ${rtExact} | אנגרמה: ${rtAnagramMatch})</span>
+                <div style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <strong>ראשי תיבות:</strong> <span style="color:var(--accent-gold); font-size:1.1rem; font-weight:bold;">${rt}</span> 
+                        <span style="font-size:0.85rem; color:var(--text-muted);">(גימטריה: ${rtScore} | פסוקים זהים: ${rtExact} | אנגרמה: ${rtAnagramMatch})</span>
+                    </div>
+                    ${rt ? `<button type="button" class="category-tab" onclick="window.copyPlainText('${rt}', this);" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; cursor: pointer; color: var(--accent-gold); border-color: var(--border-gold);"><i class="fa-solid fa-copy"></i> העתק</button>` : ''}
                 </div>
-                <div>
-                    <strong>סופי תיבות:</strong> <span style="color:var(--accent-gold); font-size:1.1rem; font-weight:bold;">${st}</span> 
-                    <span style="font-size:0.85rem; color:var(--text-muted);">(גימטריה: ${stScore} | פסוקים זהים: ${stExact} | אנגרמה: ${stAnagramMatch})</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <strong>סופי תיבות:</strong> <span style="color:var(--accent-gold); font-size:1.1rem; font-weight:bold;">${st}</span> 
+                        <span style="font-size:0.85rem; color:var(--text-muted);">(גימטריה: ${stScore} | פסוקים זהים: ${stExact} | אנגרמה: ${stAnagramMatch})</span>
+                    </div>
+                    ${st ? `<button type="button" class="category-tab" onclick="window.copyPlainText('${st}', this);" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; cursor: pointer; color: var(--accent-gold); border-color: var(--border-gold);"><i class="fa-solid fa-copy"></i> העתק</button>` : ''}
                 </div>
             </div>
         </div>
@@ -4776,7 +4953,22 @@ function initUnifiedAnalysis() {
         if (!panel || !titleEl || !contentEl) return;
 
         const sourceText = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)}`;
-        titleEl.innerHTML = `<i class="fa-solid fa-book-open"></i> פירוט לפסוק: ${sourceText}`;
+        const versePlain = v.originalText || v.verseText;
+        titleEl.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span><i class="fa-solid fa-book-open"></i> פירוט לפסוק: ${sourceText}</span>
+                <button type="button" class="category-tab uva-detail-copy-btn" style="padding: 0.2rem 0.6rem; font-size: 0.8rem; cursor: pointer; color: var(--accent-gold); border-color: var(--border-gold);">
+                    <i class="fa-solid fa-copy"></i> העתק
+                </button>
+            </div>
+        `;
+        const uvaCopyBtn = titleEl.querySelector('.uva-detail-copy-btn');
+        if (uvaCopyBtn) {
+            uvaCopyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.copyPlainText(`${versePlain} (${sourceText})`, uvaCopyBtn);
+            });
+        }
 
         const insight = findInsightByCoordinate(v.bookHeb, v.chapter, v.verse);
         let innerHtml = `
@@ -4837,8 +5029,13 @@ function initUnifiedAnalysis() {
             contentEl.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem 0;">לא נמצאו פסוקים המכילים ביטוי זה.</div>`;
         } else {
             let innerHtml = `
-                <div style="font-size:0.95rem; color:var(--text-muted); margin-bottom:1rem;">
-                    נמצאו <strong>${matches.length}</strong> פסוקים המכילים את הביטוי. מציג עד 50 תוצאות (לחץ על פסוק להצגת הפירוט שלו):
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem; border-bottom:1px solid var(--border-color); padding-bottom:0.4rem;">
+                    <span style="font-size:0.95rem; color:var(--text-muted);">
+                        נמצאו <strong>${matches.length}</strong> פסוקים (מציג עד 50):
+                    </span>
+                    <button type="button" class="category-tab uva-query-copy-btn" style="padding:0.25rem 0.65rem; font-size:0.82rem; color:var(--accent-gold); border-color:var(--border-gold); cursor:pointer;">
+                        <i class="fa-solid fa-copy"></i> העתק פסוקים
+                    </button>
                 </div>
                 <div style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:0.6rem;">
             `;
@@ -4856,6 +5053,15 @@ function initUnifiedAnalysis() {
 
             innerHtml += `</div>`;
             contentEl.innerHTML = innerHtml;
+
+            const copyQueryBtn = contentEl.querySelector('.uva-query-copy-btn');
+            if (copyQueryBtn) {
+                copyQueryBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                    window.copyPlainText(plainLines.join('\n'), copyQueryBtn);
+                });
+            }
 
             // Apply hover styles dynamically for the items
             contentEl.querySelectorAll('.uva-sub-verse-item').forEach(item => {
@@ -4882,14 +5088,34 @@ function initUnifiedAnalysis() {
             container.innerHTML = `<div style="color:var(--text-muted); font-size:0.95rem; text-align:center; padding:0.5rem 0;">לא נמצאו.</div>`;
             return;
         }
+
+        const topBar = document.createElement('div');
+        topBar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.4rem;';
+
         const limit = 50;
+        const note = document.createElement('div');
+        note.style.cssText = 'color: var(--accent-gold); font-weight: bold; font-size: 0.85rem;';
+        note.innerText = list.length > limit ? `מציג 50 מתוך ${list.length}:` : `נמצאו ${list.length}:`;
+        topBar.appendChild(note);
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'category-tab';
+        copyBtn.style.cssText = 'padding: 0.2rem 0.55rem; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.3rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;';
+        copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק';
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const plainLines = list.map(item => {
+                const v = item.verse || item;
+                const src = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+                return `${v.originalText} ${src}`;
+            });
+            window.copyPlainText(plainLines.join('\n'), copyBtn);
+        });
+        topBar.appendChild(copyBtn);
+        container.appendChild(topBar);
+
         const display = list.slice(0, limit);
-        if (list.length > limit) {
-            const note = document.createElement('div');
-            note.style.cssText = 'text-align: center; color: var(--accent-gold); font-weight: bold; margin-bottom: 0.3rem; font-size: 0.8rem;';
-            note.innerText = `מציג 50 מתוך ${list.length}:`;
-            container.appendChild(note);
-        }
         display.forEach(item => {
             const v = item.verse || item;
             const div = document.createElement('div');
@@ -4952,6 +5178,23 @@ function initUnifiedAnalysis() {
             if (targetPanel) targetPanel.style.display = 'block';
         });
     });
+
+    // Copy buttons for Unified Analysis Rashei & Sofei boxes
+    const uvaCopyRasheiBtn = document.getElementById('uva-rt-copy-rashei-btn');
+    if (uvaCopyRasheiBtn) {
+        uvaCopyRasheiBtn.addEventListener('click', () => {
+            const txt = document.getElementById('uva-rt-rashei').textContent.trim();
+            window.copyPlainText(txt, uvaCopyRasheiBtn);
+        });
+    }
+
+    const uvaCopySofeiBtn = document.getElementById('uva-rt-copy-sofei-btn');
+    if (uvaCopySofeiBtn) {
+        uvaCopySofeiBtn.addEventListener('click', () => {
+            const txt = document.getElementById('uva-rt-sofei').textContent.trim();
+            window.copyPlainText(txt, uvaCopySofeiBtn);
+        });
+    }
 
     let uvaDebounce = null;
     input.addEventListener('input', () => {
@@ -5019,14 +5262,29 @@ function initUnifiedAnalysis() {
             const gemMatches = State.tanakhVerses.filter(v => v.gematria === score);
             document.getElementById('uva-gem-count').textContent = gemMatches.length;
             if (gemMatches.length > 0) {
+                const topBar = document.createElement('div');
+                topBar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.4rem;';
+
                 const limit = 50;
+                const note = document.createElement('div');
+                note.style.cssText = 'color: var(--accent-gold); font-weight: bold; font-size: 0.85rem;';
+                note.innerText = gemMatches.length > limit ? `מציג 50 מתוך ${gemMatches.length}:` : `נמצאו ${gemMatches.length}:`;
+                topBar.appendChild(note);
+
+                const copyBtn = document.createElement('button');
+                copyBtn.type = 'button';
+                copyBtn.className = 'category-tab';
+                copyBtn.style.cssText = 'padding: 0.2rem 0.55rem; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.3rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;';
+                copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק';
+                copyBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const plainLines = gemMatches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                    window.copyPlainText(plainLines.join('\n'), copyBtn);
+                });
+                topBar.appendChild(copyBtn);
+                uvaGemMatches.appendChild(topBar);
+
                 const displayMatches = gemMatches.slice(0, limit);
-                if (gemMatches.length > limit) {
-                    const note = document.createElement('div');
-                    note.style.cssText = 'text-align: center; color: var(--accent-gold); font-weight: bold; margin-bottom: 0.5rem; font-size: 0.85rem;';
-                    note.innerText = `מציג 50 מתוך ${gemMatches.length}:`;
-                    uvaGemMatches.appendChild(note);
-                }
                 displayMatches.forEach(match => {
                     const div = document.createElement('div');
                     div.style.cssText = 'padding: 0.4rem 0; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: color 0.2s;';
@@ -5424,7 +5682,7 @@ function initAnagramFinder() {
         totalWordsEl.textContent = matchingWords.length.toLocaleString('he-IL');
         maxLengthEl.textContent = maxWordLen;
 
-        // 4. Render length groups from longest to shortest
+        // 4. Render groups
         lengthGroupsContainer.innerHTML = "";
 
         // Add legend at top of length groups
@@ -5432,108 +5690,117 @@ function initAnagramFinder() {
         legendDiv.innerHTML = getAnagramLegendHtml();
         lengthGroupsContainer.appendChild(legendDiv.firstElementChild);
 
-        const categoryRank = {
-            'gold': 1,
-            'silver': 2,
-            'red': 3,
-            'pink': 4,
-            'blue': 5,
-            'green': 6,
-            'orange': 7,
-            'purple': 8,
-            'default': 9
-        };
+        let sortMode = State.anagramSortMode || 'length';
 
-        const sortedLengths = Object.keys(groupsByLength).map(Number).sort((a, b) => b - a);
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'anagram-sort-controls';
+        controlsDiv.style.cssText = "display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; background: var(--bg-primary); border: 1px solid var(--border-gold); padding: 0.5rem 0.9rem; border-radius: var(--border-radius-sm);";
+        
+        controlsDiv.innerHTML = `
+            <div style="font-weight: bold; color: var(--accent-gold); font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-arrow-down-a-z"></i> תצוגת סידור:
+            </div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
+                <button type="button" class="category-tab anagram-sort-btn-len ${sortMode === 'length' ? 'active' : ''}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">
+                    <i class="fa-solid fa-text-width"></i> לפי כמות אותיות
+                </button>
+                <button type="button" class="category-tab anagram-sort-btn-cat ${sortMode === 'category' ? 'active' : ''}" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">
+                    <i class="fa-solid fa-palette"></i> לפי קטגוריות
+                </button>
+                <button type="button" class="category-tab anagram-copy-btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; color: var(--accent-gold); border-color: var(--border-gold); margin-right: 0.35rem; cursor: pointer;">
+                    <i class="fa-solid fa-copy"></i> העתק תוצאות
+                </button>
+            </div>
+        `;
+        lengthGroupsContainer.appendChild(controlsDiv);
 
-        sortedLengths.forEach(len => {
-            const wordsInGroup = groupsByLength[len];
-            // Sort words within group: category rank first, then highest occurrence count first, then alphabetical
-            wordsInGroup.sort((a, b) => {
-                const catA = getAnagramCategory(a.word, rawInput);
-                const catB = getAnagramCategory(b.word, rawInput);
-                const rankA = categoryRank[catA] || 9;
-                const rankB = categoryRank[catB] || 9;
+        const cardsContainer = document.createElement('div');
+        cardsContainer.className = 'anagram-cards-container';
+        lengthGroupsContainer.appendChild(cardsContainer);
 
-                if (rankA !== rankB) {
-                    return rankA - rankB;
-                }
-                if (b.count !== a.count) {
-                    return b.count - a.count;
-                }
-                return a.word.localeCompare(b.word, 'he');
-            });
+        function onAnagramFinderPillClick(item) {
+            const panel = document.getElementById('anagram-detail-panel');
+            const titleEl = document.getElementById('anagram-detail-title');
+            const contentEl = document.getElementById('anagram-detail-content');
+            if (!panel || !titleEl || !contentEl) return;
 
-            const groupCard = document.createElement('div');
-            groupCard.className = 'anagram-length-group';
-            groupCard.style.cssText = "background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1.25rem 1.5rem; margin-bottom: 1rem;";
+            titleEl.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> פסוקים המכילים את המילה: <strong>${item.word}</strong> (${item.count} מופעים)`;
 
-            const header = document.createElement('h3');
-            header.style.cssText = "color: var(--accent-gold); margin: 0 0 1rem 0; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;";
-            header.innerHTML = `
-                <span><i class="fa-solid fa-font"></i> מילים בנות ${len} אותיות</span>
-                <span style="font-size: 0.9rem; background: rgba(var(--accent-gold-rgb), 0.18); color: var(--accent-gold); padding: 0.15rem 0.7rem; border-radius: 12px; font-weight: bold;">
-                    ${wordsInGroup.length} מילים
-                </span>
-            `;
-            groupCard.appendChild(header);
+            const regex = new RegExp('(^|[^א-ת])' + item.word + '($|[^א-ת])');
+            const matches = State.tanakhVerses.filter(v => regex.test(v.cleanText));
 
-            const wordsList = document.createElement('div');
-            wordsList.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; font-family: var(--font-sans);";
-
-            wordsInGroup.forEach(item => {
-                const category = getAnagramCategory(item.word, rawInput);
-                const st = getAnagramCategoryStyle(category);
-
-                const pill = document.createElement('span');
-                pill.className = 'anagram-word-pill';
-                pill.title = `לחץ לחיפוש '${item.word}' במאגר הפסוקים`;
-                pill.style.cssText = `cursor: pointer; padding: 0.35rem 0.75rem; border: ${st.border}; background: ${st.bg}; color: ${st.color}; border-radius: var(--border-radius-sm); font-size: 1.05rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500;`;
-                pill.innerHTML = `<span>${item.word}</span> <strong style="color: ${st.countColor}; font-size: 0.9rem;">(${item.count.toLocaleString('he-IL')})</strong>`;
-
-                pill.addEventListener('mouseenter', () => {
-                    pill.style.transform = 'translateY(-1px)';
-                    pill.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+            if (matches.length === 0) {
+                contentEl.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:1rem;">לא נמצאו פסוקים.</div>`;
+            } else {
+                const limit = 50;
+                let html = `<div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.75rem;">מציג ${Math.min(matches.length, limit)} מתוך ${matches.length} פסוקים:</div>`;
+                matches.slice(0, limit).forEach(v => {
+                    const srcLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+                    html += `<div style="padding:0.4rem 0; border-bottom:1px solid var(--border-color);">${v.originalText} <span style="color:var(--accent-gold); font-size:0.85rem; font-family:var(--font-sans);">${srcLabel}</span></div>`;
                 });
-                pill.addEventListener('mouseleave', () => {
-                    pill.style.transform = 'none';
-                    pill.style.boxShadow = 'none';
-                });
+                contentEl.innerHTML = html;
+            }
 
-                pill.addEventListener('click', () => {
-                    // Show occurrences inline in anagram-detail-panel
-                    const panel = document.getElementById('anagram-detail-panel');
-                    const titleEl = document.getElementById('anagram-detail-title');
-                    const contentEl = document.getElementById('anagram-detail-content');
-                    if (!panel || !titleEl || !contentEl) return;
+            panel.style.display = 'block';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
 
-                    titleEl.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> פסוקים המכילים את המילה: <strong>${item.word}</strong> (${item.count} מופעים)`;
+        function updateFinderView() {
+            controlsDiv.querySelector('.anagram-sort-btn-len').classList.toggle('active', sortMode === 'length');
+            controlsDiv.querySelector('.anagram-sort-btn-cat').classList.toggle('active', sortMode === 'category');
+            renderAnagramCards(cardsContainer, matchingWords, rawInput, sortMode, onAnagramFinderPillClick);
+        }
 
-                    const regex = new RegExp('(^|[^א-ת])' + item.word + '($|[^א-ת])');
-                    const matches = State.tanakhVerses.filter(v => regex.test(v.cleanText));
-
-                    if (matches.length === 0) {
-                        contentEl.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:1rem;">לא נמצאו פסוקים.</div>`;
-                    } else {
-                        const limit = 50;
-                        let html = `<div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.75rem;">מציג ${Math.min(matches.length, limit)} מתוך ${matches.length} פסוקים:</div>`;
-                        matches.slice(0, limit).forEach(v => {
-                            const srcLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
-                            html += `<div style="padding:0.4rem 0; border-bottom:1px solid var(--border-color);">${v.originalText} <span style="color:var(--accent-gold); font-size:0.85rem; font-family:var(--font-sans);">${srcLabel}</span></div>`;
-                        });
-                        contentEl.innerHTML = html;
-                    }
-
-                    panel.style.display = 'block';
-                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                });
-
-                wordsList.appendChild(pill);
-            });
-
-            groupCard.appendChild(wordsList);
-            lengthGroupsContainer.appendChild(groupCard);
+        controlsDiv.querySelector('.anagram-sort-btn-len').addEventListener('click', () => {
+            sortMode = 'length';
+            State.anagramSortMode = 'length';
+            updateFinderView();
         });
+
+        controlsDiv.querySelector('.anagram-sort-btn-cat').addEventListener('click', () => {
+            sortMode = 'category';
+            State.anagramSortMode = 'category';
+            updateFinderView();
+        });
+
+        controlsDiv.querySelector('.anagram-copy-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            let plainText = '';
+            if (sortMode === 'category') {
+                const groupsByCat = {};
+                ANAGRAM_CATEGORIES_CONFIG.forEach(c => { groupsByCat[c.key] = []; });
+                matchingWords.forEach(it => {
+                    const cat = getAnagramCategory(it.word, rawInput);
+                    if (!groupsByCat[cat]) groupsByCat[cat] = [];
+                    groupsByCat[cat].push(it);
+                });
+                const sections = [];
+                ANAGRAM_CATEGORIES_CONFIG.forEach(catConfig => {
+                    const list = groupsByCat[catConfig.key];
+                    if (!list || list.length === 0) return;
+                    const wordsStr = list.map(w => `${w.word} (${w.count})`).join(', ');
+                    sections.push(`${catConfig.name} (${list.length} מילים):\n${wordsStr}`);
+                });
+                plainText = sections.join('\n\n');
+            } else {
+                const groupsByLength = {};
+                matchingWords.forEach(it => {
+                    if (!groupsByLength[it.length]) groupsByLength[it.length] = [];
+                    groupsByLength[it.length].push(it);
+                });
+                const sortedLens = Object.keys(groupsByLength).map(Number).sort((a, b) => b - a);
+                const sections = [];
+                sortedLens.forEach(l => {
+                    const list = groupsByLength[l];
+                    const wordsStr = list.map(w => `${w.word} (${w.count})`).join(', ');
+                    sections.push(`מילים בנות ${l} אותיות (${list.length} מילים):\n${wordsStr}`);
+                });
+                plainText = sections.join('\n\n');
+            }
+            window.copyPlainText(plainText, controlsDiv.querySelector('.anagram-copy-btn'));
+        });
+
+        updateFinderView();
 
         resultsContainer.style.display = 'block';
     }
@@ -5711,16 +5978,35 @@ function initMultiVerseGematria() {
         `).join('');
 
         summaryEl.innerHTML = `
-            <div style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                <strong style="color: var(--accent-gold); font-size: 1.25rem;"><i class="fa-solid fa-chart-line"></i> סיכום התפלגות לפי ספרים</strong>
-                <span style="color: var(--text-muted); font-size: 0.95rem;">
-                    נבדקו <strong>${lastLinesData.length}</strong> שורות/פסוקים | <strong>${activeBooks.length}</strong> ספרים | סה"כ <strong>${totalMatchesAll}</strong> הקבלות
-                </span>
+            <div style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <strong style="color: var(--accent-gold); font-size: 1.25rem;"><i class="fa-solid fa-chart-line"></i> סיכום התפלגות לפי ספרים</strong>
+                    <div style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.2rem;">
+                        נבדקו <strong>${lastLinesData.length}</strong> שורות/פסוקים | <strong>${activeBooks.length}</strong> ספרים | סה"כ <strong>${totalMatchesAll}</strong> הקבלות
+                    </div>
+                </div>
+                <button type="button" class="category-tab mg-copy-all-btn" style="padding: 0.3rem 0.8rem; font-size: 0.88rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                    <i class="fa-solid fa-copy"></i> העתק את כל ההקבלות
+                </button>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem 1.5rem; font-family: var(--font-sans);">
                 ${summaryRowsHtml}
             </div>
         `;
+
+        const copyAllBtn = summaryEl.querySelector('.mg-copy-all-btn');
+        if (copyAllBtn) {
+            copyAllBtn.addEventListener('click', () => {
+                const bookSections = activeBooks.map(b => {
+                    const lines = b.verseMatches.map(m => {
+                        const src = `(${m.matchedVerse.bookHeb} פרק ${numberToHebrew(m.matchedVerse.chapter)} פסוק ${numberToHebrew(m.matchedVerse.verse)})`;
+                        return `[שורה #${m.lineNum}] ${m.matchedVerse.originalText} ${src}`;
+                    });
+                    return `ספר ${b.bookHeb} (${b.totalMatchesCount} הקבלות):\n` + lines.join('\n');
+                });
+                window.copyPlainText(`סיכום הקבלות גימטריה לפי ספרים:\n\n` + bookSections.join('\n\n'), copyAllBtn);
+            });
+        }
 
         // Render Detailed Expandable Cards per Book
         booksListEl.innerHTML = "";
@@ -5732,13 +6018,30 @@ function initMultiVerseGematria() {
             const header = document.createElement('div');
             header.style.cssText = "display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;";
             header.innerHTML = `
-                <h4 style="margin: 0; color: var(--accent-gold); font-size: 1.2rem;">
-                    <i class="fa-solid fa-book"></i> ספר ${b.bookHeb}
-                </h4>
-                <span style="font-size: 0.95rem; background: rgba(var(--accent-gold-rgb), 0.18); color: var(--accent-gold); padding: 0.2rem 0.75rem; border-radius: 12px; font-weight: bold;">
-                    ${b.totalMatchesCount} הקבלות
-                </span>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <h4 style="margin: 0; color: var(--accent-gold); font-size: 1.2rem;">
+                        <i class="fa-solid fa-book"></i> ספר ${b.bookHeb}
+                    </h4>
+                    <span style="font-size: 0.85rem; background: rgba(var(--accent-gold-rgb), 0.18); color: var(--accent-gold); padding: 0.15rem 0.65rem; border-radius: 12px; font-weight: bold;">
+                        ${b.totalMatchesCount} הקבלות
+                    </span>
+                </div>
+                <button type="button" class="category-tab mg-book-copy-btn" style="padding: 0.2rem 0.6rem; font-size: 0.8rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                    <i class="fa-solid fa-copy"></i> העתק
+                </button>
             `;
+
+            const copyBookBtn = header.querySelector('.mg-book-copy-btn');
+            if (copyBookBtn) {
+                copyBookBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const lines = b.verseMatches.map(m => {
+                        const src = `(${m.matchedVerse.bookHeb} פרק ${numberToHebrew(m.matchedVerse.chapter)} פסוק ${numberToHebrew(m.matchedVerse.verse)})`;
+                        return `[שורה #${m.lineNum}] ${m.matchedVerse.originalText} ${src}`;
+                    });
+                    window.copyPlainText(`ספר ${b.bookHeb} (${b.totalMatchesCount} הקבלות):\n` + lines.join('\n'), copyBookBtn);
+                });
+            }
 
             const detailsList = document.createElement('div');
             detailsList.style.cssText = "margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; font-family: var(--font-serif); font-size: 1.15rem; line-height: 1.6;";

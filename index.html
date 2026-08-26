@@ -578,8 +578,13 @@
                     <!-- Results container -->
                     <div id="rt-results" style="display: none; margin-top: 1.5rem;">
                         <!-- 1. Rashei Teivot + Gematria -->
-                        <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); margin-bottom: 1.5rem;">
-                            <h3 style="color: var(--accent-gold); margin: 0 0 0.75rem 0; font-size: 1.2rem;"><i class="fa-solid fa-arrow-right"></i> ראשי תיבות</h3>
+                        <div style="background: var(--bg-secondary); padding: 1.25rem 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <h3 style="color: var(--accent-gold); margin: 0; font-size: 1.2rem;"><i class="fa-solid fa-arrow-right"></i> ראשי תיבות</h3>
+                                <button type="button" class="category-tab" id="rt-copy-rashei-btn" style="padding: 0.25rem 0.65rem; font-size: 0.82rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                                    <i class="fa-solid fa-copy"></i> העתק ראשי תיבות
+                                </button>
+                            </div>
                             <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 1.3rem; font-family: var(--font-serif);">
                                 <span id="rt-rashei-letters" style="font-weight: bold; letter-spacing: 0.15em; color: var(--text-primary); font-size: 1.5rem;"></span>
                                 <span style="color: var(--text-muted);">|</span>
@@ -588,8 +593,13 @@
                         </div>
 
                         <!-- 2. Sofei Teivot + Gematria -->
-                        <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); margin-bottom: 1.5rem;">
-                            <h3 style="color: var(--accent-gold); margin: 0 0 0.75rem 0; font-size: 1.2rem;"><i class="fa-solid fa-arrow-left"></i> סופי תיבות</h3>
+                        <div style="background: var(--bg-secondary); padding: 1.25rem 1.5rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-gold); margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <h3 style="color: var(--accent-gold); margin: 0; font-size: 1.2rem;"><i class="fa-solid fa-arrow-left"></i> סופי תיבות</h3>
+                                <button type="button" class="category-tab" id="rt-copy-sofei-btn" style="padding: 0.25rem 0.65rem; font-size: 0.82rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                                    <i class="fa-solid fa-copy"></i> העתק סופי תיבות
+                                </button>
+                            </div>
                             <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: 1.3rem; font-family: var(--font-serif);">
                                 <span id="rt-sofei-letters" style="font-weight: bold; letter-spacing: 0.15em; color: var(--text-primary); font-size: 1.5rem;"></span>
                                 <span style="color: var(--text-muted);">|</span>
@@ -745,7 +755,12 @@
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
                                     <!-- Rashei -->
                                     <div style="padding: 0.85rem 1.25rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
-                                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.35rem;"><i class="fa-solid fa-arrow-right"></i> ראשי תיבות</div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                            <div style="font-size: 0.9rem; color: var(--text-muted);"><i class="fa-solid fa-arrow-right"></i> ראשי תיבות</div>
+                                            <button type="button" class="category-tab" id="uva-rt-copy-rashei-btn" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                                                <i class="fa-solid fa-copy"></i> העתק
+                                            </button>
+                                        </div>
                                         <div style="display: flex; gap: 1.25rem; align-items: baseline; flex-wrap: wrap;">
                                             <span id="uva-rt-rashei" style="font-size: 1.6rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
                                             <span style="font-size: 0.95rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-rashei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
@@ -753,7 +768,12 @@
                                     </div>
                                     <!-- Sofei -->
                                     <div style="padding: 0.85rem 1.25rem; background: var(--bg-primary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
-                                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.35rem;"><i class="fa-solid fa-arrow-left"></i> סופי תיבות</div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                            <div style="font-size: 0.9rem; color: var(--text-muted);"><i class="fa-solid fa-arrow-left"></i> סופי תיבות</div>
+                                            <button type="button" class="category-tab" id="uva-rt-copy-sofei-btn" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                                                <i class="fa-solid fa-copy"></i> העתק
+                                            </button>
+                                        </div>
                                         <div style="display: flex; gap: 1.25rem; align-items: baseline; flex-wrap: wrap;">
                                             <span id="uva-rt-sofei" style="font-size: 1.6rem; font-weight: bold; font-family: var(--font-serif); letter-spacing: 0.12em;"></span>
                                             <span style="font-size: 0.95rem; color: var(--text-muted);"><i class="fa-solid fa-calculator"></i> <span id="uva-rt-sofei-gem" style="color: var(--accent-gold); font-weight: bold;"></span></span>
