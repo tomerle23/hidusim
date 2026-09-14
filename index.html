@@ -49,6 +49,9 @@
                 <button class="nav-link" data-target="anagram-finder-view">
                     <i class="fa-solid fa-shapes"></i> הרכבת מילים (אנגרמה)
                 </button>
+                <button class="nav-link" data-target="parashot-view">
+                    <i class="fa-solid fa-scroll"></i> פרשות ועליות
+                </button>
 
                 <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none !important;">
                     <i class="fa-solid fa-clipboard-check"></i> ניהול בקשות <span class="badge" id="pending-requests-badge" style="display: none; background: #e53e3e; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-right: 0.25rem;">0</span>
@@ -882,6 +885,167 @@
                     </div>
                 </div>
             </section>
+
+            <!-- VIEW: PARASHOT & ALIYOT CONTINUOUS READING -->
+            <section id="parashot-view" class="page-view">
+                <div class="gematria-calc-container" style="max-width: 1200px; margin: 0 auto; width: 100%;">
+                    <!-- Header -->
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <h2 class="logo-title" style="font-size: 2.2rem; margin-bottom: 0.4rem;">
+                            <i class="fa-solid fa-scroll"></i> קריאת פרשות ועליות ברצף
+                        </h2>
+                        <p style="color: var(--text-muted); font-size: 1.05rem; margin: 0;">
+                            תצוגה רציפה של פסוקי התורה לפי פרשות השבוע ועליות קריאת התורה מתוך מאגר התנ"ך
+                        </p>
+                    </div>
+
+                    <!-- Top Selection Bar: Chumash & Parasha & Scope -->
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1.1rem 1.4rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center;">
+                            <!-- Scope toggle (Single Parasha vs All Parashot cross-section) -->
+                            <div style="display: flex; background: var(--bg-card); border-radius: 20px; padding: 2px; border: 1px solid var(--border-gold);">
+                                <button type="button" id="pv-scope-single" class="pv-toggle-btn active" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; border-radius: 18px; border: none; cursor: pointer; background: var(--accent-gold); color: #1a1a2e; font-weight: bold;">
+                                    <i class="fa-solid fa-scroll"></i> פרשה בודדת
+                                </button>
+                                <button type="button" id="pv-scope-all" class="pv-toggle-btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; border-radius: 18px; border: none; cursor: pointer; background: transparent; color: var(--text-muted);">
+                                    <i class="fa-solid fa-arrows-split-up-and-left"></i> כל הפרשות (עלייה רוחבית)
+                                </button>
+                            </div>
+
+                            <!-- Chumash -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label for="pv-book-select" style="font-weight: bold; color: var(--accent-gold); font-size: 1rem;"><i class="fa-solid fa-book"></i> חומש:</label>
+                                <select id="pv-book-select" style="background: var(--bg-card); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.45rem 0.85rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1.1rem; cursor: pointer; outline: none;">
+                                    <option value="all">כל החומשים</option>
+                                    <option value="בראשית" selected>בראשית</option>
+                                    <option value="שמות">שמות</option>
+                                    <option value="ויקרא">ויקרא</option>
+                                    <option value="במדבר">במדבר</option>
+                                    <option value="דברים">דברים</option>
+                                </select>
+                            </div>
+
+                            <!-- Parasha (visible when scope is single) -->
+                            <div id="pv-parasha-select-wrap" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label for="pv-parasha-select" style="font-weight: bold; color: var(--accent-gold); font-size: 1rem;"><i class="fa-solid fa-scroll"></i> פרשה:</label>
+                                <select id="pv-parasha-select" style="background: var(--bg-card); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.45rem 0.85rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1.15rem; cursor: pointer; outline: none; min-width: 180px;">
+                                    <!-- Populated dynamically from ParashotData -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Parasha Navigation Buttons -->
+                        <div id="pv-parasha-nav-btns" style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button type="button" id="pv-prev-parasha-btn" class="secondary-btn" style="padding: 0.4rem 0.85rem; font-size: 0.88rem; cursor: pointer;">
+                                <i class="fa-solid fa-chevron-right"></i> פרשה קודמת
+                            </button>
+                            <button type="button" id="pv-next-parasha-btn" class="secondary-btn" style="padding: 0.4rem 0.85rem; font-size: 0.88rem; cursor: pointer;">
+                                פרשה הבאה <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Aliyot Tabs Bar -->
+                    <div style="margin-bottom: 1.25rem;">
+                        <div id="pv-aliyot-label" style="font-size: 0.92rem; color: var(--text-muted); margin-bottom: 0.45rem; font-weight: 600;">
+                            <i class="fa-solid fa-layer-group"></i> בחירת עלייה:
+                        </div>
+                        <div id="pv-aliyot-tabs" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                            <button type="button" class="category-tab active" data-aliyah="all">
+                                <i class="fa-solid fa-book-bookmark"></i> כל הפרשה ברצף
+                            </button>
+                            <button type="button" class="category-tab" data-aliyah="1">ראשון</button>
+                            <button type="button" class="category-tab" data-aliyah="2">שני</button>
+                            <button type="button" class="category-tab" data-aliyah="3">שלישי</button>
+                            <button type="button" class="category-tab" data-aliyah="4">רביעי</button>
+                            <button type="button" class="category-tab" data-aliyah="5">חמישי</button>
+                            <button type="button" class="category-tab" data-aliyah="6">ששי</button>
+                            <button type="button" class="category-tab" data-aliyah="7">שביעי</button>
+                            <button type="button" class="category-tab" data-aliyah="maftir">מפטיר</button>
+                        </div>
+                    </div>
+
+                    <!-- Controls & Preferences Bar -->
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 0.75rem 1.25rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                        <!-- Display toggles -->
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <!-- Nikud toggle -->
+                            <div style="display: flex; background: var(--bg-secondary); border-radius: 20px; padding: 2px; border: 1px solid var(--border-color);">
+                                <button type="button" id="pv-nikud-with" class="pv-toggle-btn active" style="padding: 0.25rem 0.75rem; font-size: 0.82rem; border-radius: 18px; border: none; cursor: pointer; background: var(--accent-gold); color: #1a1a2e; font-weight: bold;">
+                                    עם ניקוד וטעמים
+                                </button>
+                                <button type="button" id="pv-nikud-without" class="pv-toggle-btn" style="padding: 0.25rem 0.75rem; font-size: 0.82rem; border-radius: 18px; border: none; cursor: pointer; background: transparent; color: var(--text-muted);">
+                                    ללא ניקוד (אותיות)
+                                </button>
+                            </div>
+
+                            <!-- Layout toggle -->
+                            <div style="display: flex; background: var(--bg-secondary); border-radius: 20px; padding: 2px; border: 1px solid var(--border-color);">
+                                <button type="button" id="pv-layout-continuous" class="pv-toggle-btn active" style="padding: 0.25rem 0.75rem; font-size: 0.82rem; border-radius: 18px; border: none; cursor: pointer; background: var(--accent-gold); color: #1a1a2e; font-weight: bold;">
+                                    טקסט רציף (ספר תורה)
+                                </button>
+                                <button type="button" id="pv-layout-verses" class="pv-toggle-btn" style="padding: 0.25rem 0.75rem; font-size: 0.82rem; border-radius: 18px; border: none; cursor: pointer; background: transparent; color: var(--text-muted);">
+                                    שורה לכל פסוק
+                                </button>
+                            </div>
+
+                            <!-- Verse numbers toggle -->
+                            <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="pv-show-verse-numbers" checked style="cursor: pointer;">
+                                מספור פסוקים
+                            </label>
+                        </div>
+
+                        <!-- Actions & Font size -->
+                        <div style="display: flex; gap: 0.6rem; align-items: center;">
+                            <!-- Font size adjustment -->
+                            <div style="display: flex; align-items: center; gap: 0.25rem; border: 1px solid var(--border-gold); border-radius: var(--border-radius-sm); padding: 0.15rem 0.4rem;">
+                                <button type="button" id="pv-font-dec" title="הקטן גופן" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 0.85rem; font-weight: bold; padding: 0.1rem 0.35rem;">א-</button>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0 0.3rem;">גודל</span>
+                                <button type="button" id="pv-font-inc" title="הגדל גופן" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 1.05rem; font-weight: bold; padding: 0.1rem 0.35rem;">א+</button>
+                            </div>
+
+                            <!-- Copy text button -->
+                            <button type="button" id="pv-copy-btn" class="category-tab" style="padding: 0.3rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                                <i class="fa-solid fa-copy"></i> העתק טקסט
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stats & Info Ribbon -->
+                    <div id="pv-stats-ribbon" style="background: rgba(var(--accent-gold-rgb), 0.06); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                        <!-- Will be populated dynamically -->
+                    </div>
+
+                    <!-- Continuous Text Card -->
+                    <div id="pv-text-card" style="background: var(--bg-card); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 2.2rem 2.5rem; box-shadow: var(--shadow-card); min-height: 400px; position: relative;">
+                        <div id="pv-text-content" style="font-family: var(--font-serif); font-size: 1.55rem; line-height: 2.4; text-align: justify; direction: rtl; color: var(--text-primary); transition: font-size 0.2s;">
+                            <!-- Continuous text rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Verse Quick Action / Detail Modal Panel -->
+                    <div id="pv-verse-detail-panel" style="display: none; margin-top: 1.5rem; background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem 2rem; position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <h4 id="pv-verse-detail-title" style="color: var(--accent-gold); margin: 0; font-size: 1.2rem;">
+                                <i class="fa-solid fa-book-open"></i> פסוק נבחר
+                            </h4>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button type="button" id="pv-verse-detail-copy" class="category-tab" style="padding: 0.2rem 0.6rem; font-size: 0.8rem; cursor: pointer; color: var(--accent-gold); border-color: var(--border-gold);">
+                                    <i class="fa-solid fa-copy"></i> העתק פסוק
+                                </button>
+                                <button type="button" id="pv-verse-detail-analyze" class="primary-btn" style="padding: 0.2rem 0.75rem; font-size: 0.8rem; cursor: pointer;">
+                                    <i class="fa-solid fa-magnifying-glass-chart"></i> נתח פסוק זה
+                                </button>
+                                <button type="button" onclick="document.getElementById('pv-verse-detail-panel').style.display='none';" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.2rem 0.5rem; border-radius: var(--border-radius-sm); cursor: pointer; font-size: 1rem;">✕</button>
+                            </div>
+                        </div>
+                        <div id="pv-verse-detail-content" style="font-family: var(--font-serif); font-size: 1.35rem; line-height: 1.8; margin-bottom: 0.75rem; color: var(--text-primary); text-align: center;"></div>
+                        <div id="pv-verse-detail-meta" style="display: flex; gap: 1.5rem; font-size: 0.95rem; color: var(--text-muted); justify-content: center; flex-wrap: wrap;"></div>
+                    </div>
+                </div>
+            </section>
+
             <section id="admin-requests-view" class="page-view">
                 <div class="editor-container" style="max-width: 900px;">
                     <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-check"></i> ניהול בקשות פרסום</h2>
@@ -1130,6 +1294,7 @@
 
     <!-- Scripts -->
     <script src="tanakh_data.js"></script>
+    <script src="parashot_data.js"></script>
     <script src="data.js"></script>
     <script src="parser.js"></script>
     <script src="app.js"></script>

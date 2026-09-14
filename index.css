@@ -1877,3 +1877,82 @@ body[data-bg="dark"] .index-chapter-btn.has-commentaries:hover {
     }
 }
 
+/* Parashot & Aliyot Continuous View Styles */
+.pv-verse-span {
+    cursor: pointer;
+    display: inline;
+    border-radius: 4px;
+    padding: 0.05rem 0.2rem;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.pv-verse-span:hover {
+    background: rgba(var(--accent-gold-rgb), 0.18);
+    color: var(--accent-gold);
+}
+.pv-verse-span.pv-selected {
+    background: rgba(var(--accent-gold-rgb), 0.28);
+    outline: 1px solid var(--accent-gold);
+    border-radius: 4px;
+}
+.pv-verse-num {
+    color: var(--accent-gold);
+    font-size: 0.72em;
+    margin: 0 0.4rem 0 0.15rem;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    vertical-align: baseline;
+    user-select: none;
+    opacity: 0.85;
+}
+.pv-aliyah-divider {
+    margin: 2.2rem 0 1.25rem 0;
+    padding: 0.6rem 1.25rem;
+    background: rgba(var(--accent-gold-rgb), 0.1);
+    border-right: 4px solid var(--accent-gold);
+    border-radius: var(--border-radius-sm);
+    font-weight: bold;
+    color: var(--accent-gold);
+    font-size: 1.15rem;
+    font-family: var(--font-sans);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.pv-verse-row {
+    padding: 0.5rem 0.5rem;
+    border-bottom: 1px dashed var(--border-color);
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    transition: background 0.15s ease;
+}
+.pv-verse-row:hover {
+    background: rgba(var(--accent-gold-rgb), 0.08);
+}
+.pv-verse-row.pv-selected {
+    background: rgba(var(--accent-gold-rgb), 0.2);
+    border-right: 3px solid var(--accent-gold);
+}
+.pv-toggle-btn {
+    transition: background 0.2s, color 0.2s;
+}
+.pv-parasha-divider {
+    margin: 2.2rem 0 1rem 0;
+    padding: 0.75rem 1.25rem;
+    background: rgba(var(--accent-gold-rgb), 0.14);
+    border-right: 5px solid var(--accent-gold);
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+
+

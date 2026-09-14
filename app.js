@@ -274,6 +274,9 @@ function initOfflineTanakh() {
                 const cleanWords = words.filter(w => w !== 'ס' && w !== 'פ');
                 const rawText = cleanWords.join(" ");
                 const cleanText = stripNikud(rawText);
+                const pInfo = (typeof getVerseParashaAndAliyah === 'function' && ["בראשית", "שמות", "ויקרא", "במדבר", "דברים"].includes(bookInfo.heb))
+                    ? getVerseParashaAndAliyah(bookInfo.heb, c + 1, v + 1) 
+                    : null;
                 
                 verses.push({
                     bookEng: bookInfo.eng,
@@ -282,7 +285,14 @@ function initOfflineTanakh() {
                     verse: v + 1,
                     originalText: rawText,
                     cleanText: cleanText,
-                    gematria: calculateGematria(cleanText)
+                    gematria: calculateGematria(cleanText),
+                    parasha: pInfo ? pInfo.parasha : null,
+                    parashaNum: pInfo ? pInfo.parashaNum : null,
+                    parashaEng: pInfo ? pInfo.parashaEng : null,
+                    aliyah: pInfo ? pInfo.aliyah : null,
+                    aliyahName: pInfo ? pInfo.aliyahName : null,
+                    isMaftir: pInfo ? pInfo.isMaftir : false,
+                    weekdayAliyah: pInfo ? pInfo.weekdayAliyah : null
                 });
             }
         }
@@ -305,6 +315,22 @@ function initOfflineTanakh() {
     console.timeEnd("Indexing Tanakh");
     console.log(`Indexed ${State.tanakhVerses.length} verses from local Tanakh.`);
 }
+
+// Universal Helper to format verse citation with Parasha and Aliyah
+function formatVerseSource(v, withParens = true) {
+    if (!v) return '';
+    const book = v.bookHeb || '';
+    const chap = numberToHebrew(v.chapter);
+    const ver = numberToHebrew(v.verse);
+    let str = `${book} פרק ${chap} פסוק ${ver}`;
+    if (v.parasha) {
+        str += ` • פרשת ${v.parasha}`;
+        if (v.aliyahName) str += `, ${v.aliyahName}`;
+        if (v.isMaftir) str += ' [מפטיר]';
+    }
+    return withParens ? `(${str})` : str;
+}
+window.formatVerseSource = formatVerseSource;
 
 // --- Sefaria API Tanakh Integration ---
 const SefariaBookMap = {
@@ -808,6 +834,8 @@ function initNavigation() {
                 renderAdminRequests();
             } else if (targetId === 'admin-verse-view') {
                 initAdminVerseManagement();
+            } else if (targetId === 'parashot-view') {
+                if (window.renderParashotView) window.renderParashotView();
             }
             
             // Sync shared verse inputs and render panel histories
@@ -2046,7 +2074,7 @@ function initGematriaCalculator() {
                             copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק פסוקים';
                             copyBtn.addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                                const plainLines = matches.map(m => `${m.originalText} ${formatVerseSource(m)}`);
                                 window.copyPlainText(plainLines.join('\n'), copyBtn);
                             });
                             topBar.appendChild(copyBtn);
@@ -2085,7 +2113,7 @@ function initGematriaCalculator() {
                                         });
                                     });
                                 }
-                                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                                const sourceLabel = formatVerseSource(match);
                                 item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1.0rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
                                 detailGrid.appendChild(item);
                             });
@@ -2134,7 +2162,7 @@ function initGematriaCalculator() {
             copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק פסוקים';
             copyBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                const plainLines = matches.map(m => `${m.originalText} ${formatVerseSource(m)}`);
                 window.copyPlainText(plainLines.join('\n'), copyBtn);
             });
             topBar.appendChild(copyBtn);
@@ -2176,7 +2204,7 @@ function initGematriaCalculator() {
                     });
                 }
                 
-                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                const sourceLabel = formatVerseSource(match);
                 item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
                 matchesGrid.appendChild(item);
             });
@@ -2263,7 +2291,7 @@ function initWordRepetitionCalculator() {
             copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק פסוקים';
             copyBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                const plainLines = matches.map(m => `${m.originalText} ${formatVerseSource(m)}`);
                 window.copyPlainText(plainLines.join('\n'), copyBtn);
             });
             topBar.appendChild(copyBtn);
@@ -2305,7 +2333,7 @@ function initWordRepetitionCalculator() {
                     });
                 }
                 
-                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                const sourceLabel = formatVerseSource(match);
                 item.innerHTML = `${match.originalText}<span style="color: var(--accent-gold); font-size: 1rem; font-family: var(--font-sans); margin-right: 0.25rem;">${sourceLabel}</span>`;
                 matchesGrid.appendChild(item);
             });
@@ -3553,6 +3581,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initRasheiTeivot();
     initUnifiedAnalysis();
     initAnagramFinder();
+    initParashotView();
     initLibraryView();
     initAdminModals(); // Initialize modal handlers for Admin
     initAdminVerseManagement(); // Initialize admin verse management selectors
@@ -4014,7 +4043,7 @@ function initRasheiTeivot() {
         const r = getRashei(v.originalText);
         const s = getSofei(v.originalText);
         const gem = v.gematria || calculateGematria(v.originalText);
-        const sourceLabel = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)}`;
+        const sourceLabel = formatVerseSource(v, false);
 
         titleEl.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -4035,10 +4064,11 @@ function initRasheiTeivot() {
             <div style="font-family: var(--font-serif); font-size: 1.45rem; line-height: 1.8; text-align: center; margin-bottom: 1.25rem; padding: 1rem; border-right: 3px solid var(--border-gold); background: rgba(var(--accent-gold-rgb), 0.03);">
                 ${v.originalText}
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.95rem; color: var(--text-muted);">
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.95rem; color: var(--text-muted); align-items: center;">
                 <span>גימטריה: <strong style="color: var(--accent-gold);">${gem}</strong></span>
                 <span>ראשי תיבות: <strong style="color: var(--accent-gold);">${r}</strong> (גימטריה: ${calculateGematria(r)})</span>
                 <span>סופי תיבות: <strong style="color: var(--accent-gold);">${s}</strong> (גימטריה: ${calculateGematria(s)})</span>
+                ${v.parasha ? `<span style="background: rgba(var(--accent-gold-rgb), 0.12); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-gold);"><i class="fa-solid fa-scroll"></i> פרשת <strong>${v.parasha}</strong> • עליית <strong>${v.aliyahName || 'ראשון'}</strong>${v.isMaftir ? ' [מפטיר]' : ''}</span>` : ''}
             </div>
         `;
         panel.style.display = 'block';
@@ -4071,7 +4101,7 @@ function initRasheiTeivot() {
             e.stopPropagation();
             const plainLines = items.map(item => {
                 const v = item.verse || item;
-                const src = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+                const src = formatVerseSource(v);
                 return `${v.originalText} ${src}`;
             });
             window.copyPlainText(plainLines.join('\n'), copyBtn);
@@ -4089,7 +4119,7 @@ function initRasheiTeivot() {
             div.addEventListener('click', () => {
                 showRtDetailVerse(v);
             });
-            const sourceLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+            const sourceLabel = formatVerseSource(v);
             // Show rashei/sofei of this verse inline
             let extraInfo = '';
             if (item.rashei !== undefined) {
@@ -4952,7 +4982,7 @@ function initUnifiedAnalysis() {
         const contentEl = document.getElementById('uva-detail-content');
         if (!panel || !titleEl || !contentEl) return;
 
-        const sourceText = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)}`;
+        const sourceText = formatVerseSource(v, false);
         const versePlain = v.originalText || v.verseText;
         titleEl.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -4975,8 +5005,9 @@ function initUnifiedAnalysis() {
             <div style="font-family: var(--font-serif); font-size: 1.45rem; line-height: 1.8; text-align: center; margin-bottom: 1.5rem; padding: 1rem; border-right: 3px solid var(--border-gold); background: rgba(var(--accent-gold-rgb), 0.03); color: var(--text-primary);">
                 ${v.originalText || v.verseText}
             </div>
-            <div style="font-size: 0.95rem; color: var(--text-muted); text-align: center; margin-bottom: 2rem;">
-                גימטריה של הפסוק: <strong style="color: var(--accent-gold); font-size: 1.1rem;">${v.gematria || calculateGematria(v.originalText)}</strong>
+            <div style="font-size: 0.95rem; color: var(--text-muted); text-align: center; margin-bottom: 2rem; display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
+                <span>גימטריה של הפסוק: <strong style="color: var(--accent-gold); font-size: 1.1rem;">${v.gematria || calculateGematria(v.originalText)}</strong></span>
+                ${v.parasha ? `<span style="background: rgba(var(--accent-gold-rgb), 0.12); padding: 0.25rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-gold);"><i class="fa-solid fa-scroll"></i> פרשת <strong>${v.parasha}</strong> • עליית <strong>${v.aliyahName || 'ראשון'}</strong>${v.isMaftir ? ' [מפטיר]' : ''}</span>` : ''}
             </div>
         `;
 
@@ -5043,7 +5074,7 @@ function initUnifiedAnalysis() {
             const limit = 50;
             const display = matches.slice(0, limit);
             display.forEach(match => {
-                const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                const sourceLabel = formatVerseSource(match);
                 innerHtml += `
                     <div class="uva-sub-verse-item" style="padding:0.5rem; border-bottom:1px solid var(--border-color); cursor:pointer; transition:all 0.2s; font-family:var(--font-serif); font-size:1.15rem; color:var(--text-primary);" onclick="showUvaDetailVerseByCoord('${match.bookHeb}', ${match.chapter}, ${match.verse})">
                         ${match.originalText} <span style="color:var(--accent-gold); font-size:0.9rem; font-family:var(--font-sans); margin-right:0.25rem;">${sourceLabel}</span>
@@ -5058,7 +5089,7 @@ function initUnifiedAnalysis() {
             if (copyQueryBtn) {
                 copyQueryBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const plainLines = matches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                    const plainLines = matches.map(m => `${m.originalText} ${formatVerseSource(m)}`);
                     window.copyPlainText(plainLines.join('\n'), copyQueryBtn);
                 });
             }
@@ -5107,7 +5138,7 @@ function initUnifiedAnalysis() {
             e.stopPropagation();
             const plainLines = list.map(item => {
                 const v = item.verse || item;
-                const src = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+                const src = formatVerseSource(v);
                 return `${v.originalText} ${src}`;
             });
             window.copyPlainText(plainLines.join('\n'), copyBtn);
@@ -5125,7 +5156,7 @@ function initUnifiedAnalysis() {
             div.addEventListener('click', () => {
                 showUvaDetailVerseByCoord(v.bookHeb, v.chapter, v.verse);
             });
-            const sourceLabel = `(${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})`;
+            const sourceLabel = formatVerseSource(v);
             div.innerHTML = `${v.originalText} <span style="color: var(--accent-gold); font-size: 0.85rem; font-family: var(--font-sans);">${sourceLabel}</span>`;
             container.appendChild(div);
         });
@@ -5278,7 +5309,7 @@ function initUnifiedAnalysis() {
                 copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> העתק';
                 copyBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const plainLines = gemMatches.map(m => `${m.originalText} (${m.bookHeb} פרק ${numberToHebrew(m.chapter)} פסוק ${numberToHebrew(m.verse)})`);
+                    const plainLines = gemMatches.map(m => `${m.originalText} ${formatVerseSource(m)}`);
                     window.copyPlainText(plainLines.join('\n'), copyBtn);
                 });
                 topBar.appendChild(copyBtn);
@@ -5291,7 +5322,7 @@ function initUnifiedAnalysis() {
                     div.addEventListener('mouseenter', () => { div.style.color = 'var(--accent-gold)'; });
                     div.addEventListener('mouseleave', () => { div.style.color = ''; });
                     
-                    const sourceLabel = `(${match.bookHeb} פרק ${numberToHebrew(match.chapter)} פסוק ${numberToHebrew(match.verse)})`;
+                    const sourceLabel = formatVerseSource(match);
                     div.innerHTML = `${match.originalText} <span style="color: var(--accent-gold); font-size: 0.85rem; font-family: var(--font-sans);">${sourceLabel}</span>`;
                     
                     div.addEventListener('click', () => {
@@ -5999,7 +6030,7 @@ function initMultiVerseGematria() {
             copyAllBtn.addEventListener('click', () => {
                 const bookSections = activeBooks.map(b => {
                     const lines = b.verseMatches.map(m => {
-                        const src = `(${m.matchedVerse.bookHeb} פרק ${numberToHebrew(m.matchedVerse.chapter)} פסוק ${numberToHebrew(m.matchedVerse.verse)})`;
+                        const src = formatVerseSource(m.matchedVerse);
                         return `[שורה #${m.lineNum}] ${m.matchedVerse.originalText} ${src}`;
                     });
                     return `ספר ${b.bookHeb} (${b.totalMatchesCount} הקבלות):\n` + lines.join('\n');
@@ -6036,7 +6067,7 @@ function initMultiVerseGematria() {
                 copyBookBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const lines = b.verseMatches.map(m => {
-                        const src = `(${m.matchedVerse.bookHeb} פרק ${numberToHebrew(m.matchedVerse.chapter)} פסוק ${numberToHebrew(m.matchedVerse.verse)})`;
+                        const src = formatVerseSource(m.matchedVerse);
                         return `[שורה #${m.lineNum}] ${m.matchedVerse.originalText} ${src}`;
                     });
                     window.copyPlainText(`ספר ${b.bookHeb} (${b.totalMatchesCount} הקבלות):\n` + lines.join('\n'), copyBookBtn);
@@ -6074,7 +6105,7 @@ function initMultiVerseGematria() {
                     });
                 }
 
-                const sourceLabel = `(${matchInfo.matchedVerse.bookHeb} פרק ${numberToHebrew(matchInfo.matchedVerse.chapter)} פסוק ${numberToHebrew(matchInfo.matchedVerse.verse)})`;
+                const sourceLabel = formatVerseSource(matchInfo.matchedVerse);
                 item.innerHTML = `
                     <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-sans); margin-bottom: 0.15rem;">
                         הקבלה לשורה #${matchInfo.lineNum} (גימטריה: ${matchInfo.gematria})
@@ -6177,4 +6208,629 @@ function initMultiVerseGematria() {
         });
     }
 }
+
+// ==========================================
+// --- VIEW: PARASHOT & ALIYOT CONTINUOUS READING ---
+// ==========================================
+function initParashotView() {
+    const scopeSingleBtn = document.getElementById('pv-scope-single');
+    const scopeAllBtn = document.getElementById('pv-scope-all');
+    const bookSelect = document.getElementById('pv-book-select');
+    const parashaSelect = document.getElementById('pv-parasha-select');
+    const parashaSelectWrap = document.getElementById('pv-parasha-select-wrap');
+    const parashaNavBtns = document.getElementById('pv-parasha-nav-btns');
+    const prevParashaBtn = document.getElementById('pv-prev-parasha-btn');
+    const nextParashaBtn = document.getElementById('pv-next-parasha-btn');
+    const aliyotLabel = document.getElementById('pv-aliyot-label');
+    const aliyotTabsContainer = document.getElementById('pv-aliyot-tabs');
+    const nikudWithBtn = document.getElementById('pv-nikud-with');
+    const nikudWithoutBtn = document.getElementById('pv-nikud-without');
+    const layoutContinuousBtn = document.getElementById('pv-layout-continuous');
+    const layoutVersesBtn = document.getElementById('pv-layout-verses');
+    const showVerseNumbersCb = document.getElementById('pv-show-verse-numbers');
+    const fontDecBtn = document.getElementById('pv-font-dec');
+    const fontIncBtn = document.getElementById('pv-font-inc');
+    const copyBtn = document.getElementById('pv-copy-btn');
+    const textContent = document.getElementById('pv-text-content');
+    const statsRibbon = document.getElementById('pv-stats-ribbon');
+    const detailPanel = document.getElementById('pv-verse-detail-panel');
+    const detailTitle = document.getElementById('pv-verse-detail-title');
+    const detailContent = document.getElementById('pv-verse-detail-content');
+    const detailMeta = document.getElementById('pv-verse-detail-meta');
+    const detailCopyBtn = document.getElementById('pv-verse-detail-copy');
+    const detailAnalyzeBtn = document.getElementById('pv-verse-detail-analyze');
+
+    if (!bookSelect || !parashaSelect || !textContent) return;
+
+    const AliyahPluralHebrewNames = {
+        '1': 'הראשונות',
+        '2': 'השניות',
+        '3': 'השלישיות',
+        '4': 'הרביעיות',
+        '5': 'החמישיות',
+        '6': 'הששיות',
+        '7': 'השביעיות',
+        'maftir': 'המפטיר',
+        'all': 'של כל הפרשות'
+    };
+
+    const PvState = {
+        scope: 'single', // 'single' (פרשה בודדת) or 'all' (כל הפרשות ברצף לפי עלייה)
+        currentBook: 'בראשית',
+        currentParashaNum: 1, // 1 to 54
+        currentAliyah: 'all', // 'all', '1'..'7', 'maftir'
+        withNikud: true,
+        layout: 'continuous', // 'continuous' or 'verses'
+        showVerseNumbers: true,
+        fontSize: parseFloat(localStorage.getItem('torah_pv_fontsize')) || 1.55,
+        selectedVerse: null
+    };
+
+    // Apply saved font size
+    textContent.style.fontSize = `${PvState.fontSize}rem`;
+
+    // Populate Parasha dropdown
+    function updateParashaDropdown() {
+        if (typeof ParashotData === 'undefined' || !Array.isArray(ParashotData)) return;
+        const selectedBook = bookSelect.value;
+        const filtered = selectedBook === 'all' 
+            ? ParashotData 
+            : ParashotData.filter(p => p.bookHeb === selectedBook);
+
+        parashaSelect.innerHTML = '';
+        filtered.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.num;
+            opt.textContent = `${p.num}. פרשת ${p.nameHeb} (${p.bookHeb})`;
+            if (p.num === PvState.currentParashaNum) {
+                opt.selected = true;
+            }
+            parashaSelect.appendChild(opt);
+        });
+
+        // If currentParashaNum is not in the filtered list, pick the first one
+        if (!filtered.some(p => p.num === PvState.currentParashaNum) && filtered.length > 0) {
+            PvState.currentParashaNum = filtered[0].num;
+            parashaSelect.value = filtered[0].num;
+        }
+    }
+
+    // Populate initially
+    updateParashaDropdown();
+
+    // Event: Scope toggle (Single Parasha vs All Parashot cross-section)
+    if (scopeSingleBtn && scopeAllBtn) {
+        scopeSingleBtn.addEventListener('click', () => {
+            PvState.scope = 'single';
+            scopeSingleBtn.classList.add('active');
+            scopeSingleBtn.style.background = 'var(--accent-gold)';
+            scopeSingleBtn.style.color = '#1a1a2e';
+            scopeSingleBtn.style.fontWeight = 'bold';
+            scopeAllBtn.classList.remove('active');
+            scopeAllBtn.style.background = 'transparent';
+            scopeAllBtn.style.color = 'var(--text-muted)';
+            scopeAllBtn.style.fontWeight = 'normal';
+
+            if (parashaSelectWrap) parashaSelectWrap.style.display = 'flex';
+            if (parashaNavBtns) parashaNavBtns.style.display = 'flex';
+            if (aliyotLabel) aliyotLabel.innerHTML = '<i class="fa-solid fa-layer-group"></i> בחירת עלייה בפרשה:';
+
+            const tabAll = aliyotTabsContainer ? aliyotTabsContainer.querySelector('button[data-aliyah="all"]') : null;
+            if (tabAll) tabAll.innerHTML = '<i class="fa-solid fa-book-bookmark"></i> כל הפרשה ברצף';
+
+            renderText();
+        });
+
+        scopeAllBtn.addEventListener('click', () => {
+            PvState.scope = 'all';
+            scopeAllBtn.classList.add('active');
+            scopeAllBtn.style.background = 'var(--accent-gold)';
+            scopeAllBtn.style.color = '#1a1a2e';
+            scopeAllBtn.style.fontWeight = 'bold';
+            scopeSingleBtn.classList.remove('active');
+            scopeSingleBtn.style.background = 'transparent';
+            scopeSingleBtn.style.color = 'var(--text-muted)';
+            scopeSingleBtn.style.fontWeight = 'normal';
+
+            if (parashaSelectWrap) parashaSelectWrap.style.display = 'none';
+            if (parashaNavBtns) parashaNavBtns.style.display = 'none';
+            if (aliyotLabel) aliyotLabel.innerHTML = '<i class="fa-solid fa-arrows-split-up-and-left"></i> בחר סוג עלייה להצגה רוחבית בכל הפרשות (למשל: כל העליות הראשונות):';
+
+            const tabAll = aliyotTabsContainer ? aliyotTabsContainer.querySelector('button[data-aliyah="all"]') : null;
+            if (tabAll) tabAll.innerHTML = '<i class="fa-solid fa-book-bookmark"></i> כל העליות של כל הפרשות';
+
+            // If it was 'all', default to '1' for immediate clear cross-aliyah display
+            if (PvState.currentAliyah === 'all') {
+                PvState.currentAliyah = '1';
+                if (aliyotTabsContainer) {
+                    aliyotTabsContainer.querySelectorAll('button').forEach(b => {
+                        if (b.getAttribute('data-aliyah') === '1') b.classList.add('active');
+                        else b.classList.remove('active');
+                    });
+                }
+            }
+
+            renderText();
+        });
+    }
+
+    // Event: Chumash change
+    bookSelect.addEventListener('change', () => {
+        PvState.currentBook = bookSelect.value;
+        updateParashaDropdown();
+        renderText();
+    });
+
+    // Event: Parasha change
+    parashaSelect.addEventListener('change', () => {
+        PvState.currentParashaNum = parseInt(parashaSelect.value);
+        const pObj = ParashotData.find(p => p.num === PvState.currentParashaNum);
+        if (pObj && bookSelect.value !== 'all' && bookSelect.value !== pObj.bookHeb) {
+            bookSelect.value = pObj.bookHeb;
+            updateParashaDropdown();
+        }
+        renderText();
+    });
+
+    // Event: Previous Parasha
+    if (prevParashaBtn) {
+        prevParashaBtn.addEventListener('click', () => {
+            if (typeof ParashotData === 'undefined') return;
+            let nextNum = PvState.currentParashaNum - 1;
+            if (nextNum < 1) nextNum = ParashotData.length;
+            PvState.currentParashaNum = nextNum;
+            const pObj = ParashotData.find(p => p.num === nextNum);
+            if (pObj && bookSelect.value !== 'all') {
+                bookSelect.value = pObj.bookHeb;
+                updateParashaDropdown();
+            } else {
+                parashaSelect.value = nextNum;
+            }
+            renderText();
+        });
+    }
+
+    // Event: Next Parasha
+    if (nextParashaBtn) {
+        nextParashaBtn.addEventListener('click', () => {
+            if (typeof ParashotData === 'undefined') return;
+            let nextNum = PvState.currentParashaNum + 1;
+            if (nextNum > ParashotData.length) nextNum = 1;
+            PvState.currentParashaNum = nextNum;
+            const pObj = ParashotData.find(p => p.num === nextNum);
+            if (pObj && bookSelect.value !== 'all') {
+                bookSelect.value = pObj.bookHeb;
+                updateParashaDropdown();
+            } else {
+                parashaSelect.value = nextNum;
+            }
+            renderText();
+        });
+    }
+
+    // Event: Aliyot Tabs
+    if (aliyotTabsContainer) {
+        aliyotTabsContainer.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                aliyotTabsContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                PvState.currentAliyah = btn.getAttribute('data-aliyah');
+                renderText();
+            });
+        });
+    }
+
+    // Display Toggles: Nikud
+    if (nikudWithBtn && nikudWithoutBtn) {
+        nikudWithBtn.addEventListener('click', () => {
+            PvState.withNikud = true;
+            nikudWithBtn.classList.add('active');
+            nikudWithBtn.style.background = 'var(--accent-gold)';
+            nikudWithBtn.style.color = '#1a1a2e';
+            nikudWithBtn.style.fontWeight = 'bold';
+            nikudWithoutBtn.classList.remove('active');
+            nikudWithoutBtn.style.background = 'transparent';
+            nikudWithoutBtn.style.color = 'var(--text-muted)';
+            nikudWithoutBtn.style.fontWeight = 'normal';
+            renderText();
+        });
+        nikudWithoutBtn.addEventListener('click', () => {
+            PvState.withNikud = false;
+            nikudWithoutBtn.classList.add('active');
+            nikudWithoutBtn.style.background = 'var(--accent-gold)';
+            nikudWithoutBtn.style.color = '#1a1a2e';
+            nikudWithoutBtn.style.fontWeight = 'bold';
+            nikudWithBtn.classList.remove('active');
+            nikudWithBtn.style.background = 'transparent';
+            nikudWithBtn.style.color = 'var(--text-muted)';
+            nikudWithBtn.style.fontWeight = 'normal';
+            renderText();
+        });
+    }
+
+    // Display Toggles: Layout
+    if (layoutContinuousBtn && layoutVersesBtn) {
+        layoutContinuousBtn.addEventListener('click', () => {
+            PvState.layout = 'continuous';
+            layoutContinuousBtn.classList.add('active');
+            layoutContinuousBtn.style.background = 'var(--accent-gold)';
+            layoutContinuousBtn.style.color = '#1a1a2e';
+            layoutContinuousBtn.style.fontWeight = 'bold';
+            layoutVersesBtn.classList.remove('active');
+            layoutVersesBtn.style.background = 'transparent';
+            layoutVersesBtn.style.color = 'var(--text-muted)';
+            layoutVersesBtn.style.fontWeight = 'normal';
+            renderText();
+        });
+        layoutVersesBtn.addEventListener('click', () => {
+            PvState.layout = 'verses';
+            layoutVersesBtn.classList.add('active');
+            layoutVersesBtn.style.background = 'var(--accent-gold)';
+            layoutVersesBtn.style.color = '#1a1a2e';
+            layoutVersesBtn.style.fontWeight = 'bold';
+            layoutContinuousBtn.classList.remove('active');
+            layoutContinuousBtn.style.background = 'transparent';
+            layoutContinuousBtn.style.color = 'var(--text-muted)';
+            layoutContinuousBtn.style.fontWeight = 'normal';
+            renderText();
+        });
+    }
+
+    // Display Toggles: Verse Numbers
+    if (showVerseNumbersCb) {
+        showVerseNumbersCb.addEventListener('change', (e) => {
+            PvState.showVerseNumbers = e.target.checked;
+            renderText();
+        });
+    }
+
+    // Font size controls
+    if (fontDecBtn) {
+        fontDecBtn.addEventListener('click', () => {
+            if (PvState.fontSize > 1.1) {
+                PvState.fontSize = Math.round((PvState.fontSize - 0.15) * 100) / 100;
+                textContent.style.fontSize = `${PvState.fontSize}rem`;
+                localStorage.setItem('torah_pv_fontsize', PvState.fontSize);
+            }
+        });
+    }
+    if (fontIncBtn) {
+        fontIncBtn.addEventListener('click', () => {
+            if (PvState.fontSize < 2.5) {
+                PvState.fontSize = Math.round((PvState.fontSize + 0.15) * 100) / 100;
+                textContent.style.fontSize = `${PvState.fontSize}rem`;
+                localStorage.setItem('torah_pv_fontsize', PvState.fontSize);
+            }
+        });
+    }
+
+    // Helper: get grouped parashot data according to current scope and filters
+    function getGroupedParashotData() {
+        if (typeof ParashotData === 'undefined' || !State.tanakhVerses) return [];
+
+        let parashotList = [];
+        if (PvState.scope === 'single') {
+            const pObj = ParashotData.find(p => p.num === PvState.currentParashaNum);
+            if (pObj) parashotList = [pObj];
+        } else {
+            // Scope is 'all': filter by selected Chumash (or all 54 if 'all')
+            const selBook = bookSelect.value;
+            parashotList = (selBook === 'all') 
+                ? ParashotData 
+                : ParashotData.filter(p => p.bookHeb === selBook);
+        }
+
+        return parashotList.map(p => {
+            const pVerses = State.tanakhVerses.filter(v => v.parasha === p.nameHeb);
+            let verses = [];
+            let aliyahLabel = '';
+
+            if (PvState.currentAliyah === 'all') {
+                verses = pVerses;
+                aliyahLabel = 'כל הפרשה ברצף';
+            } else if (PvState.currentAliyah === 'maftir') {
+                const maftirVerses = pVerses.filter(v => v.isMaftir);
+                verses = maftirVerses.length > 0 ? maftirVerses : pVerses.slice(-4);
+                aliyahLabel = 'עליית מפטיר';
+            } else {
+                const aNum = parseInt(PvState.currentAliyah);
+                verses = pVerses.filter(v => v.aliyah === aNum);
+                aliyahLabel = `עליית ${AliyahHebrewNames[aNum] || aNum}`;
+            }
+
+            return {
+                parasha: p,
+                aliyahLabel: aliyahLabel,
+                verses: verses
+            };
+        }).filter(g => g.verses.length > 0);
+    }
+
+    // Copy text button
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            const groups = getGroupedParashotData();
+            if (groups.length === 0) return;
+
+            let fullText = '';
+            const aliyahTypeStr = AliyahPluralHebrewNames[PvState.currentAliyah] || PvState.currentAliyah;
+            const bookScopeStr = bookSelect.value === 'all' ? 'כל התורה' : `חומש ${bookSelect.value}`;
+
+            if (PvState.scope === 'all') {
+                fullText += `כל העליות ${aliyahTypeStr} (${bookScopeStr} • ${groups.length} פרשות):\n===============================\n\n`;
+                groups.forEach(g => {
+                    const firstV = g.verses[0];
+                    const lastV = g.verses[g.verses.length - 1];
+                    const rangeStr = `${g.parasha.bookHeb} ${numberToHebrew(firstV.chapter)}, ${numberToHebrew(firstV.verse)} - ${numberToHebrew(lastV.chapter)}, ${numberToHebrew(lastV.verse)}`;
+
+                    const plainLines = g.verses.map(v => {
+                        const text = PvState.withNikud ? v.originalText : v.cleanText;
+                        return PvState.showVerseNumbers ? `(${numberToHebrew(v.verse)}) ${text}` : text;
+                    });
+
+                    fullText += `פרשת ${g.parasha.nameHeb} • ${g.aliyahLabel} (${rangeStr}):\n`;
+                    fullText += (PvState.layout === 'continuous' ? plainLines.join(' ') : plainLines.join('\n')) + '\n\n';
+                });
+            } else {
+                const g = groups[0];
+                const firstV = g.verses[0];
+                const lastV = g.verses[g.verses.length - 1];
+                const rangeStr = `${g.parasha.bookHeb} ${numberToHebrew(firstV.chapter)}, ${numberToHebrew(firstV.verse)} - ${numberToHebrew(lastV.chapter)}, ${numberToHebrew(lastV.verse)}`;
+
+                const plainLines = g.verses.map(v => {
+                    const text = PvState.withNikud ? v.originalText : v.cleanText;
+                    return PvState.showVerseNumbers ? `(${numberToHebrew(v.verse)}) ${text}` : text;
+                });
+
+                fullText = `ספר ${g.parasha.bookHeb} • פרשת ${g.parasha.nameHeb} • ${g.aliyahLabel} (${rangeStr}):\n\n` + 
+                    (PvState.layout === 'continuous' ? plainLines.join(' ') : plainLines.join('\n'));
+            }
+
+            window.copyPlainText(fullText.trim(), copyBtn);
+        });
+    }
+
+    // Detail Panel Actions
+    if (detailCopyBtn) {
+        detailCopyBtn.addEventListener('click', () => {
+            if (!PvState.selectedVerse) return;
+            const src = formatVerseSource(PvState.selectedVerse);
+            window.copyPlainText(`${PvState.selectedVerse.originalText} ${src}`, detailCopyBtn);
+        });
+    }
+
+    if (detailAnalyzeBtn) {
+        detailAnalyzeBtn.addEventListener('click', () => {
+            if (!PvState.selectedVerse) return;
+            const v = PvState.selectedVerse;
+            // Switch to Unified Analysis view
+            switchView('verse-analysis-unified-view');
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.getAttribute('data-target') === 'verse-analysis-unified-view') {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+            const unifiedInput = document.getElementById('uva-verse-input');
+            if (unifiedInput) {
+                unifiedInput.value = v.originalText;
+                unifiedInput.dispatchEvent(new Event('input'));
+            }
+            const autoBtn = document.getElementById('uva-analyze-btn');
+            if (autoBtn) autoBtn.click();
+        });
+    }
+
+    // Show verse in detail panel
+    function showVerseDetail(v, el) {
+        PvState.selectedVerse = v;
+        // Highlight in text
+        textContent.querySelectorAll('.pv-selected').forEach(x => x.classList.remove('pv-selected'));
+        if (el) el.classList.add('pv-selected');
+
+        if (!detailPanel) return;
+        const srcLabel = formatVerseSource(v, false);
+        detailTitle.innerHTML = `<i class="fa-solid fa-book-open"></i> פסוק: ${srcLabel}`;
+        detailContent.innerText = v.originalText;
+
+        const gem = v.gematria || calculateGematria(v.cleanText);
+        const r = getRashei(v.originalText);
+        const s = getSofei(v.originalText);
+
+        detailMeta.innerHTML = `
+            <span>גימטריה: <strong style="color: var(--accent-gold);">${gem}</strong></span>
+            <span>ראשי תיבות: <strong style="color: var(--accent-gold);">${r}</strong> (גימטריה: ${calculateGematria(r)})</span>
+            <span>סופי תיבות: <strong style="color: var(--accent-gold);">${s}</strong> (גימטריה: ${calculateGematria(s)})</span>
+            <span>חומש <strong>${v.bookHeb}</strong></span>
+            <span>פרשת <strong>${v.parasha || ''}</strong></span>
+            <span>עליית <strong>${v.aliyahName || 'ראשון'}</strong></span>
+        `;
+        detailPanel.style.display = 'block';
+        detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Render text and statistics
+    function renderText() {
+        if (typeof ParashotData === 'undefined' || !State.tanakhVerses || State.tanakhVerses.length === 0) {
+            textContent.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted);">טוען נתוני תנ"ך ופרשות...</div>';
+            return;
+        }
+
+        const groups = getGroupedParashotData();
+        if (groups.length === 0) {
+            textContent.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted);">לא נמצאו פסוקים עבור בחירה זו.</div>';
+            statsRibbon.innerHTML = '';
+            return;
+        }
+
+        // Aggregate statistics
+        let totalVerses = 0;
+        let totalWords = 0;
+        let totalLetters = 0;
+        let totalGematria = 0;
+
+        groups.forEach(g => {
+            totalVerses += g.verses.length;
+            g.verses.forEach(v => {
+                const wList = (v.cleanText || '').split(/\s+/).filter(w => w.length > 0);
+                totalWords += wList.length;
+                totalLetters += (v.cleanText || '').replace(/[^א-ת]/g, '').length;
+                totalGematria += v.gematria || calculateGematria(v.cleanText);
+            });
+        });
+
+        // Update stats ribbon
+        if (PvState.scope === 'all') {
+            const aliyahTypeStr = AliyahPluralHebrewNames[PvState.currentAliyah] || PvState.currentAliyah;
+            const bookScopeStr = bookSelect.value === 'all' ? 'כל התורה' : `חומש ${bookSelect.value}`;
+
+            statsRibbon.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <span style="font-size: 1.15rem; font-weight: bold; color: var(--accent-gold);">
+                        <i class="fa-solid fa-arrows-split-up-and-left"></i> כל העליות ${aliyahTypeStr} (${bookScopeStr})
+                    </span>
+                    <span style="background: rgba(var(--accent-gold-rgb), 0.15); color: var(--accent-gold); padding: 0.15rem 0.65rem; border-radius: 12px; font-weight: bold; font-size: 0.85rem;">
+                        ${groups.length} פרשות
+                    </span>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.92rem; color: var(--text-muted); align-items: center;">
+                    <span><strong>${totalVerses.toLocaleString()}</strong> פסוקים</span>
+                    <span>•</span>
+                    <span><strong>${totalWords.toLocaleString()}</strong> מילים</span>
+                    <span>•</span>
+                    <span><strong>${totalLetters.toLocaleString()}</strong> אותיות</span>
+                    <span>•</span>
+                    <span>גימטריה כוללת: <strong style="color: var(--accent-gold);">${totalGematria.toLocaleString()}</strong></span>
+                </div>
+            `;
+        } else {
+            const g = groups[0];
+            const pObj = g.parasha;
+            const firstV = g.verses[0];
+            const lastV = g.verses[g.verses.length - 1];
+            const rangeText = `${firstV.bookHeb} פרק ${numberToHebrew(firstV.chapter)} פסוק ${numberToHebrew(firstV.verse)} עד פרק ${numberToHebrew(lastV.chapter)} פסוק ${numberToHebrew(lastV.verse)}`;
+
+            statsRibbon.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <span style="font-size: 1.15rem; font-weight: bold; color: var(--accent-gold);">
+                        <i class="fa-solid fa-scroll"></i> ספר ${pObj.bookHeb} • פרשת ${pObj.nameHeb} • ${g.aliyahLabel}
+                    </span>
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">(${rangeText})</span>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.92rem; color: var(--text-muted); align-items: center;">
+                    <span><strong>${totalVerses}</strong> פסוקים</span>
+                    <span>•</span>
+                    <span><strong>${totalWords.toLocaleString()}</strong> מילים</span>
+                    <span>•</span>
+                    <span><strong>${totalLetters.toLocaleString()}</strong> אותיות</span>
+                    <span>•</span>
+                    <span>גימטריה כוללת: <strong style="color: var(--accent-gold);">${totalGematria.toLocaleString()}</strong></span>
+                </div>
+            `;
+        }
+
+        // Render main content
+        textContent.innerHTML = '';
+
+        groups.forEach((g, gIdx) => {
+            const firstV = g.verses[0];
+            const lastV = g.verses[g.verses.length - 1];
+            const rangeText = `${g.parasha.bookHeb} פרק ${numberToHebrew(firstV.chapter)} פסוק ${numberToHebrew(firstV.verse)} עד פרק ${numberToHebrew(lastV.chapter)} פסוק ${numberToHebrew(lastV.verse)}`;
+
+            // Header for Parasha in 'all' scope (or if viewing all parashot)
+            if (PvState.scope === 'all') {
+                const parashaHeader = document.createElement('div');
+                parashaHeader.className = 'pv-parasha-divider';
+                parashaHeader.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                        <span style="font-size: 1.25rem; font-weight: bold; color: var(--accent-gold);">
+                            <i class="fa-solid fa-scroll"></i> פרשת ${g.parasha.nameHeb} (${g.parasha.bookHeb})
+                        </span>
+                        <span style="background: rgba(var(--accent-gold-rgb), 0.2); color: var(--accent-gold); padding: 0.15rem 0.65rem; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">
+                            ${g.aliyahLabel}
+                        </span>
+                    </div>
+                    <span style="font-size: 0.88rem; color: var(--text-muted); font-family: var(--font-sans);">
+                        (${rangeText} • ${g.verses.length} פסוקים)
+                    </span>
+                `;
+                textContent.appendChild(parashaHeader);
+            }
+
+            if (PvState.layout === 'continuous') {
+                let currentAliyahGroup = null;
+
+                g.verses.forEach((v, idx) => {
+                    // Divider if single parasha scope and viewing all aliyot
+                    if (PvState.scope === 'single' && PvState.currentAliyah === 'all' && v.aliyah && v.aliyah !== currentAliyahGroup) {
+                        currentAliyahGroup = v.aliyah;
+                        const aName = AliyahHebrewNames[currentAliyahGroup] || `עלייה ${currentAliyahGroup}`;
+                        const div = document.createElement('div');
+                        div.className = 'pv-aliyah-divider';
+                        div.innerHTML = `
+                            <span><i class="fa-solid fa-layer-group"></i> עליית ${aName}</span>
+                            <span style="font-size: 0.85rem; opacity: 0.85; font-weight: normal;">(פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})</span>
+                        `;
+                        textContent.appendChild(div);
+                    }
+
+                    const span = document.createElement('span');
+                    span.className = 'pv-verse-span';
+                    span.title = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)} (פרשת ${v.parasha} • לחץ לפירוט)`;
+
+                    const text = PvState.withNikud ? v.originalText : v.cleanText;
+                    const vNumHtml = PvState.showVerseNumbers 
+                        ? `<span class="pv-verse-num">(${numberToHebrew(v.verse)})</span>` 
+                        : '';
+
+                    span.innerHTML = `${vNumHtml}<span class="pv-verse-text">${text}</span> `;
+                    span.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showVerseDetail(v, span);
+                    });
+                    textContent.appendChild(span);
+                });
+            } else {
+                // Verse-by-verse layout
+                g.verses.forEach((v, idx) => {
+                    // Divider if single parasha scope and viewing all aliyot
+                    if (PvState.scope === 'single' && PvState.currentAliyah === 'all' && (idx === 0 || v.aliyah !== g.verses[idx - 1].aliyah)) {
+                        const aName = AliyahHebrewNames[v.aliyah] || `עלייה ${v.aliyah}`;
+                        const div = document.createElement('div');
+                        div.className = 'pv-aliyah-divider';
+                        div.innerHTML = `
+                            <span><i class="fa-solid fa-layer-group"></i> עליית ${aName}</span>
+                            <span style="font-size: 0.85rem; opacity: 0.85; font-weight: normal;">(פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})</span>
+                        `;
+                        textContent.appendChild(div);
+                    }
+
+                    const row = document.createElement('div');
+                    row.className = 'pv-verse-row';
+                    const text = PvState.withNikud ? v.originalText : v.cleanText;
+                    const vNum = numberToHebrew(v.verse);
+
+                    row.innerHTML = `
+                        <span class="pv-verse-num" style="min-width: 45px; text-align: left;">(${vNum})</span>
+                        <div class="pv-verse-text" style="flex: 1;">${text}</div>
+                    `;
+                    row.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showVerseDetail(v, row);
+                    });
+                    textContent.appendChild(row);
+                });
+            }
+        });
+    }
+
+    // Expose render function
+    window.renderParashotView = renderText;
+
+    // Initial render
+    renderText();
+}
+
+
 
