@@ -994,6 +994,11 @@
                                 <input type="checkbox" id="pv-show-verse-numbers" checked style="cursor: pointer;">
                                 מספור פסוקים
                             </label>
+
+                            <!-- Peshat split view toggle -->
+                            <button type="button" id="pv-peshat-toggle" class="pv-toggle-btn" style="padding: 0.28rem 0.85rem; font-size: 0.82rem; border-radius: 18px; border: 1px solid var(--border-gold); cursor: pointer; background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.4rem; font-weight: bold; transition: all 0.2s;">
+                                <i class="fa-solid fa-columns"></i> פשט טקסט (פיצול מסך)
+                            </button>
                         </div>
 
                         <!-- Actions & Font size -->
@@ -1295,6 +1300,8 @@
     <!-- Scripts -->
     <script src="tanakh_data.js"></script>
     <script src="parashot_data.js"></script>
+    <script src="peshat_bereshit.js"></script>
+    <script src="peshat_shemot.js"></script>
     <script src="data.js"></script>
     <script src="parser.js"></script>
     <script src="app.js"></script>

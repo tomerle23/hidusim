@@ -4005,6 +4005,8 @@ function initRasheiTeivot() {
             return toRegularLetter(lastChar);
         }).join('');
     }
+    window.getRashei = getRashei;
+    window.getSofei = getSofei;
 
     // Sort letters alphabetically for anagram comparison
     function sortLetters(str) {
@@ -6231,6 +6233,7 @@ function initParashotView() {
     const fontDecBtn = document.getElementById('pv-font-dec');
     const fontIncBtn = document.getElementById('pv-font-inc');
     const copyBtn = document.getElementById('pv-copy-btn');
+    const peshatToggleBtn = document.getElementById('pv-peshat-toggle');
     const textContent = document.getElementById('pv-text-content');
     const statsRibbon = document.getElementById('pv-stats-ribbon');
     const detailPanel = document.getElementById('pv-verse-detail-panel');
@@ -6262,6 +6265,7 @@ function initParashotView() {
         withNikud: true,
         layout: 'continuous', // 'continuous' or 'verses'
         showVerseNumbers: true,
+        showPeshat: false, // split-screen peshat mode
         fontSize: parseFloat(localStorage.getItem('torah_pv_fontsize')) || 1.55,
         selectedVerse: null
     };
@@ -6484,6 +6488,25 @@ function initParashotView() {
         });
     }
 
+    // Peshat Split-Screen Toggle
+    if (peshatToggleBtn) {
+        peshatToggleBtn.addEventListener('click', () => {
+            PvState.showPeshat = !PvState.showPeshat;
+            if (PvState.showPeshat) {
+                peshatToggleBtn.classList.add('active');
+                peshatToggleBtn.style.background = 'var(--accent-gold)';
+                peshatToggleBtn.style.color = '#1a1a2e';
+                peshatToggleBtn.style.fontWeight = 'bold';
+            } else {
+                peshatToggleBtn.classList.remove('active');
+                peshatToggleBtn.style.background = 'transparent';
+                peshatToggleBtn.style.color = 'var(--text-muted)';
+                peshatToggleBtn.style.fontWeight = 'normal';
+            }
+            renderText();
+        });
+    }
+
     // Font size controls
     if (fontDecBtn) {
         fontDecBtn.addEventListener('click', () => {
@@ -6546,6 +6569,24 @@ function initParashotView() {
         }).filter(g => g.verses.length > 0);
     }
 
+    // Helper functions for Peshat support across Torah books
+    function getVersePeshat(v) {
+        if (!v) return '';
+        const pKey = `${v.chapter}_${v.verse}`;
+        if (v.bookHeb === 'בראשית' && typeof window.PeshatBereshit !== 'undefined') {
+            return window.PeshatBereshit[pKey] || '';
+        }
+        if (v.bookHeb === 'שמות' && typeof window.PeshatShemot !== 'undefined') {
+            return window.PeshatShemot[pKey] || '';
+        }
+        return '';
+    }
+
+    function isPeshatSupported(bookHeb) {
+        return (bookHeb === 'בראשית' && typeof window.PeshatBereshit !== 'undefined') ||
+               (bookHeb === 'שמות' && typeof window.PeshatShemot !== 'undefined');
+    }
+
     // Copy text button
     if (copyBtn) {
         copyBtn.addEventListener('click', () => {
@@ -6556,6 +6597,16 @@ function initParashotView() {
             const aliyahTypeStr = AliyahPluralHebrewNames[PvState.currentAliyah] || PvState.currentAliyah;
             const bookScopeStr = bookSelect.value === 'all' ? 'כל התורה' : `חומש ${bookSelect.value}`;
 
+            const formatVerse = (v) => {
+                const text = PvState.withNikud ? v.originalText : v.cleanText;
+                const vNum = numberToHebrew(v.verse);
+                const peshatText = getVersePeshat(v);
+                if (PvState.showPeshat && peshatText) {
+                    return `(${vNum})\n[מקרא]: ${text}\n[פשט]: ${peshatText}\n`;
+                }
+                return PvState.showVerseNumbers ? `(${vNum}) ${text}` : text;
+            };
+
             if (PvState.scope === 'all') {
                 fullText += `כל העליות ${aliyahTypeStr} (${bookScopeStr} • ${groups.length} פרשות):\n===============================\n\n`;
                 groups.forEach(g => {
@@ -6563,13 +6614,10 @@ function initParashotView() {
                     const lastV = g.verses[g.verses.length - 1];
                     const rangeStr = `${g.parasha.bookHeb} ${numberToHebrew(firstV.chapter)}, ${numberToHebrew(firstV.verse)} - ${numberToHebrew(lastV.chapter)}, ${numberToHebrew(lastV.verse)}`;
 
-                    const plainLines = g.verses.map(v => {
-                        const text = PvState.withNikud ? v.originalText : v.cleanText;
-                        return PvState.showVerseNumbers ? `(${numberToHebrew(v.verse)}) ${text}` : text;
-                    });
+                    const plainLines = g.verses.map(formatVerse);
 
                     fullText += `פרשת ${g.parasha.nameHeb} • ${g.aliyahLabel} (${rangeStr}):\n`;
-                    fullText += (PvState.layout === 'continuous' ? plainLines.join(' ') : plainLines.join('\n')) + '\n\n';
+                    fullText += (PvState.layout === 'continuous' && !PvState.showPeshat ? plainLines.join(' ') : plainLines.join('\n')) + '\n\n';
                 });
             } else {
                 const g = groups[0];
@@ -6577,13 +6625,10 @@ function initParashotView() {
                 const lastV = g.verses[g.verses.length - 1];
                 const rangeStr = `${g.parasha.bookHeb} ${numberToHebrew(firstV.chapter)}, ${numberToHebrew(firstV.verse)} - ${numberToHebrew(lastV.chapter)}, ${numberToHebrew(lastV.verse)}`;
 
-                const plainLines = g.verses.map(v => {
-                    const text = PvState.withNikud ? v.originalText : v.cleanText;
-                    return PvState.showVerseNumbers ? `(${numberToHebrew(v.verse)}) ${text}` : text;
-                });
+                const plainLines = g.verses.map(formatVerse);
 
                 fullText = `ספר ${g.parasha.bookHeb} • פרשת ${g.parasha.nameHeb} • ${g.aliyahLabel} (${rangeStr}):\n\n` + 
-                    (PvState.layout === 'continuous' ? plainLines.join(' ') : plainLines.join('\n'));
+                    (PvState.layout === 'continuous' && !PvState.showPeshat ? plainLines.join(' ') : plainLines.join('\n'));
             }
 
             window.copyPlainText(fullText.trim(), copyBtn);
@@ -6595,7 +6640,9 @@ function initParashotView() {
         detailCopyBtn.addEventListener('click', () => {
             if (!PvState.selectedVerse) return;
             const src = formatVerseSource(PvState.selectedVerse);
-            window.copyPlainText(`${PvState.selectedVerse.originalText} ${src}`, detailCopyBtn);
+            const peshat = getVersePeshat(PvState.selectedVerse);
+            const peshatText = peshat ? `\n[פשט]: ${peshat}` : '';
+            window.copyPlainText(`${PvState.selectedVerse.originalText} ${src}${peshatText}`, detailCopyBtn);
         });
     }
 
@@ -6626,7 +6673,12 @@ function initParashotView() {
     function showVerseDetail(v, el) {
         PvState.selectedVerse = v;
         // Highlight in text
-        textContent.querySelectorAll('.pv-selected').forEach(x => x.classList.remove('pv-selected'));
+        textContent.querySelectorAll('.pv-selected, .pv-selected-sync').forEach(x => {
+            x.classList.remove('pv-selected');
+            x.classList.remove('pv-selected-sync');
+        });
+        const vKey = `${v.chapter}_${v.verse}`;
+        textContent.querySelectorAll(`[data-vkey="${vKey}"]`).forEach(x => x.classList.add('pv-selected-sync'));
         if (el) el.classList.add('pv-selected');
 
         if (!detailPanel) return;
@@ -6635,8 +6687,21 @@ function initParashotView() {
         detailContent.innerText = v.originalText;
 
         const gem = v.gematria || calculateGematria(v.cleanText);
-        const r = getRashei(v.originalText);
-        const s = getSofei(v.originalText);
+        const rFn = typeof getRashei === 'function' ? getRashei : window.getRashei;
+        const sFn = typeof getSofei === 'function' ? getSofei : window.getSofei;
+        const r = rFn ? rFn(v.originalText) : '';
+        const s = sFn ? sFn(v.originalText) : '';
+        const pText = getVersePeshat(v);
+
+        let peshatHtml = '';
+        if (pText) {
+            peshatHtml = `
+                <div style="margin-top: 0.85rem; padding: 0.75rem 1rem; background: rgba(var(--accent-gold-rgb), 0.08); border-right: 4px solid var(--accent-gold); border-radius: 4px; font-family: var(--font-sans); font-size: 0.98rem; line-height: 1.7; color: var(--text-primary);">
+                    <div style="font-weight: bold; color: var(--accent-gold); font-size: 0.88rem; margin-bottom: 0.3rem;"><i class="fa-solid fa-comment-dots"></i> פשט הפסוק (עברית פשוטה):</div>
+                    ${pText}
+                </div>
+            `;
+        }
 
         detailMeta.innerHTML = `
             <span>גימטריה: <strong style="color: var(--accent-gold);">${gem}</strong></span>
@@ -6645,6 +6710,7 @@ function initParashotView() {
             <span>חומש <strong>${v.bookHeb}</strong></span>
             <span>פרשת <strong>${v.parasha || ''}</strong></span>
             <span>עליית <strong>${v.aliyahName || 'ראשון'}</strong></span>
+            ${peshatHtml}
         `;
         detailPanel.style.display = 'block';
         detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -6758,7 +6824,211 @@ function initParashotView() {
                 textContent.appendChild(parashaHeader);
             }
 
-            if (PvState.layout === 'continuous') {
+            if (PvState.showPeshat) {
+                // Split Screen: Biblical text on RIGHT, Peshat on LEFT (in RTL grid)
+                const splitContainer = document.createElement('div');
+                splitContainer.className = 'pv-split-container';
+
+                const colMikra = document.createElement('div');
+                colMikra.className = 'pv-split-column pv-split-biblical';
+                colMikra.innerHTML = `<div class="pv-split-col-header"><i class="fa-solid fa-book-bible"></i> מקרא (פסוקי התורה)</div>`;
+                const colMikraBody = document.createElement('div');
+                colMikraBody.className = 'pv-split-col-body';
+                colMikra.appendChild(colMikraBody);
+
+                const colPeshat = document.createElement('div');
+                colPeshat.className = 'pv-split-column pv-split-peshat';
+                colPeshat.innerHTML = `<div class="pv-split-col-header"><i class="fa-solid fa-comment-dots"></i> פשט הטקסט (ביאור בעברית פשוטה)</div>`;
+                const colPeshatBody = document.createElement('div');
+                colPeshatBody.className = 'pv-split-col-body';
+                colPeshat.appendChild(colPeshatBody);
+
+                splitContainer.appendChild(colMikra);
+                splitContainer.appendChild(colPeshat);
+                textContent.appendChild(splitContainer);
+
+                const hasPeshat = isPeshatSupported(g.parasha.bookHeb);
+
+                if (!hasPeshat) {
+                    colPeshatBody.innerHTML = `
+                        <div class="pv-peshat-notice">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--accent-gold);"><i class="fa-solid fa-circle-info"></i></div>
+                            <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text-primary);">ביאור פשט הטקסט</div>
+                            ביאור הפשט במילים פשוטות זמין כעת במערכת עבור כל פרשות <strong>חומש בראשית וחומש שמות</strong> (2,742 פסוקים).<br>
+                            ביאור מפורט לשאר חומשי התורה (${g.parasha.bookHeb}) יתווסף בהמשך.
+                        </div>
+                    `;
+                }
+
+                if (PvState.layout === 'continuous') {
+                    let currentAliyahGroup = null;
+
+                    g.verses.forEach((v, idx) => {
+                        const vKey = `${v.chapter}_${v.verse}`;
+                        const pText = getVersePeshat(v);
+
+                        if (PvState.scope === 'single' && PvState.currentAliyah === 'all' && v.aliyah && v.aliyah !== currentAliyahGroup) {
+                            currentAliyahGroup = v.aliyah;
+                            const aName = AliyahHebrewNames[currentAliyahGroup] || `עלייה ${currentAliyahGroup}`;
+                            
+                            const divM = document.createElement('div');
+                            divM.className = 'pv-aliyah-divider';
+                            divM.innerHTML = `<span><i class="fa-solid fa-layer-group"></i> עליית ${aName}</span> <span style="font-size: 0.85rem; opacity: 0.85; font-weight: normal;">(פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})</span>`;
+                            colMikraBody.appendChild(divM);
+
+                            if (hasPeshat) {
+                                const divP = document.createElement('div');
+                                divP.className = 'pv-aliyah-divider';
+                                divP.innerHTML = `<span><i class="fa-solid fa-layer-group"></i> עליית ${aName} - פשט</span> <span style="font-size: 0.85rem; opacity: 0.85; font-weight: normal;">(פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})</span>`;
+                                colPeshatBody.appendChild(divP);
+                            }
+                        }
+
+                        const text = PvState.withNikud ? v.originalText : v.cleanText;
+                        const vNumHtml = PvState.showVerseNumbers 
+                            ? `<span class="pv-verse-num">(${numberToHebrew(v.verse)})</span>` 
+                            : '';
+
+                        // Mikra element
+                        const spanM = document.createElement('span');
+                        spanM.className = 'pv-verse-span';
+                        spanM.setAttribute('data-vkey', vKey);
+                        spanM.title = `${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)} (פרשת ${v.parasha} • לחץ לפירוט)`;
+                        spanM.innerHTML = `${vNumHtml}<span class="pv-verse-text">${text}</span> `;
+
+                        // Peshat element
+                        if (hasPeshat) {
+                            const spanP = document.createElement('span');
+                            spanP.className = 'pv-peshat-span';
+                            spanP.setAttribute('data-vkey', vKey);
+                            spanP.title = `פשט ${v.bookHeb} פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)}`;
+                            spanP.innerHTML = `${vNumHtml}<span class="pv-peshat-text">${pText}</span> `;
+
+                            // Synchronized Hover
+                            spanM.addEventListener('mouseenter', () => {
+                                spanM.classList.add('pv-hover-sync');
+                                spanP.classList.add('pv-hover-sync');
+                            });
+                            spanM.addEventListener('mouseleave', () => {
+                                spanM.classList.remove('pv-hover-sync');
+                                spanP.classList.remove('pv-hover-sync');
+                            });
+                            spanP.addEventListener('mouseenter', () => {
+                                spanM.classList.add('pv-hover-sync');
+                                spanP.classList.add('pv-hover-sync');
+                            });
+                            spanP.addEventListener('mouseleave', () => {
+                                spanM.classList.remove('pv-hover-sync');
+                                spanP.classList.remove('pv-hover-sync');
+                            });
+
+                            // Synchronized Click
+                            const handleSplitClick = (e) => {
+                                e.stopPropagation();
+                                textContent.querySelectorAll('.pv-selected, .pv-selected-sync').forEach(x => {
+                                    x.classList.remove('pv-selected');
+                                    x.classList.remove('pv-selected-sync');
+                                });
+                                spanM.classList.add('pv-selected-sync');
+                                spanP.classList.add('pv-selected-sync');
+                                showVerseDetail(v, spanM);
+                            };
+                            spanM.addEventListener('click', handleSplitClick);
+                            spanP.addEventListener('click', handleSplitClick);
+                            colPeshatBody.appendChild(spanP);
+                        } else {
+                            spanM.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                showVerseDetail(v, spanM);
+                            });
+                        }
+
+                        colMikraBody.appendChild(spanM);
+                    });
+                } else {
+                    // Verse-by-verse layout
+                    g.verses.forEach((v, idx) => {
+                        const vKey = `${v.chapter}_${v.verse}`;
+                        const pText = getVersePeshat(v);
+
+                        if (PvState.scope === 'single' && PvState.currentAliyah === 'all' && (idx === 0 || v.aliyah !== g.verses[idx - 1].aliyah)) {
+                            const aName = AliyahHebrewNames[v.aliyah] || `עלייה ${v.aliyah}`;
+                            const divM = document.createElement('div');
+                            divM.className = 'pv-aliyah-divider';
+                            divM.innerHTML = `<span><i class="fa-solid fa-layer-group"></i> עליית ${aName}</span> <span style="font-size: 0.85rem; opacity: 0.85; font-weight: normal;">(פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})</span>`;
+                            colMikraBody.appendChild(divM);
+
+                            if (hasPeshat) {
+                                const divP = document.createElement('div');
+                                divP.className = 'pv-aliyah-divider';
+                                divP.innerHTML = `<span><i class="fa-solid fa-layer-group"></i> עליית ${aName} - פשט</span> <span style="font-size: 0.85rem; opacity: 0.85; font-weight: normal;">(פרק ${numberToHebrew(v.chapter)} פסוק ${numberToHebrew(v.verse)})</span>`;
+                                colPeshatBody.appendChild(divP);
+                            }
+                        }
+
+                        const text = PvState.withNikud ? v.originalText : v.cleanText;
+                        const vNum = numberToHebrew(v.verse);
+
+                        const rowM = document.createElement('div');
+                        rowM.className = 'pv-verse-row';
+                        rowM.setAttribute('data-vkey', vKey);
+                        rowM.innerHTML = `
+                            <span class="pv-verse-num" style="min-width: 45px; text-align: left;">(${vNum})</span>
+                            <div class="pv-verse-text" style="flex: 1;">${text}</div>
+                        `;
+
+                        if (hasPeshat) {
+                            const rowP = document.createElement('div');
+                            rowP.className = 'pv-peshat-row';
+                            rowP.setAttribute('data-vkey', vKey);
+                            rowP.innerHTML = `
+                                <span class="pv-verse-num" style="min-width: 45px; text-align: left;">(${vNum})</span>
+                                <div class="pv-peshat-text" style="flex: 1;">${pText}</div>
+                            `;
+
+                            // Synchronized Hover
+                            rowM.addEventListener('mouseenter', () => {
+                                rowM.classList.add('pv-hover-sync');
+                                rowP.classList.add('pv-hover-sync');
+                            });
+                            rowM.addEventListener('mouseleave', () => {
+                                rowM.classList.remove('pv-hover-sync');
+                                rowP.classList.remove('pv-hover-sync');
+                            });
+                            rowP.addEventListener('mouseenter', () => {
+                                rowM.classList.add('pv-hover-sync');
+                                rowP.classList.add('pv-hover-sync');
+                            });
+                            rowP.addEventListener('mouseleave', () => {
+                                rowM.classList.remove('pv-hover-sync');
+                                rowP.classList.remove('pv-hover-sync');
+                            });
+
+                            // Synchronized Click
+                            const handleSplitClick = (e) => {
+                                e.stopPropagation();
+                                textContent.querySelectorAll('.pv-selected, .pv-selected-sync').forEach(x => {
+                                    x.classList.remove('pv-selected');
+                                    x.classList.remove('pv-selected-sync');
+                                });
+                                rowM.classList.add('pv-selected-sync');
+                                rowP.classList.add('pv-selected-sync');
+                                showVerseDetail(v, rowM);
+                            };
+                            rowM.addEventListener('click', handleSplitClick);
+                            rowP.addEventListener('click', handleSplitClick);
+                            colPeshatBody.appendChild(rowP);
+                        } else {
+                            rowM.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                showVerseDetail(v, rowM);
+                            });
+                        }
+
+                        colMikraBody.appendChild(rowM);
+                    });
+                }
+            } else if (PvState.layout === 'continuous') {
                 let currentAliyahGroup = null;
 
                 g.verses.forEach((v, idx) => {
