@@ -52,6 +52,9 @@
                 <button class="nav-link" data-target="parashot-view">
                     <i class="fa-solid fa-scroll"></i> פרשות ועליות
                 </button>
+                <button class="nav-link" data-target="tanakh-peshat-view">
+                    <i class="fa-solid fa-book-open-reader"></i> פשט תנ"ך
+                </button>
 
                 <button class="nav-link admin-only" data-target="admin-requests-view" id="nav-admin-requests" style="display: none !important;">
                     <i class="fa-solid fa-clipboard-check"></i> ניהול בקשות <span class="badge" id="pending-requests-badge" style="display: none; background: #e53e3e; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; font-size: 0.75rem; margin-right: 0.25rem;">0</span>
@@ -1051,6 +1054,140 @@
                 </div>
             </section>
 
+            <!-- VIEW: TANAKH PESHAT (פשט תנ"ך) -->
+            <section id="tanakh-peshat-view" class="page-view">
+                <div class="gematria-calc-container" style="max-width: 1250px; margin: 0 auto; width: 100%;">
+                    <!-- Header -->
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <h2 class="logo-title" style="font-size: 2.2rem; margin-bottom: 0.4rem;">
+                            <i class="fa-solid fa-book-open-reader"></i> פשט תנ"ך
+                        </h2>
+                        <p style="color: var(--text-muted); font-size: 1.05rem; margin: 0;">
+                            הטקסט המקראי לצד ביאור הפשט בלשון ימינו - קריאה ברורה, שוטפת ומובנת לכל קורא
+                        </p>
+                    </div>
+
+                    <!-- Top Selection Bar: Book, Chapter & Search -->
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 1.1rem 1.4rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center;">
+                            <!-- Book select -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label for="tp-book-select" style="font-weight: bold; color: var(--accent-gold); font-size: 1rem;"><i class="fa-solid fa-book"></i> ספר:</label>
+                                <select id="tp-book-select" style="background: var(--bg-card); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.45rem 0.85rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1.15rem; cursor: pointer; outline: none; min-width: 220px;">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+
+                            <!-- Chapter select -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label for="tp-chapter-select" style="font-weight: bold; color: var(--accent-gold); font-size: 1rem;"><i class="fa-solid fa-bookmark"></i> פרק:</label>
+                                <select id="tp-chapter-select" style="background: var(--bg-card); border: 1px solid var(--border-gold); color: var(--text-primary); padding: 0.45rem 0.85rem; border-radius: var(--border-radius-sm); font-family: var(--font-serif); font-size: 1.15rem; cursor: pointer; outline: none; min-width: 140px;">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+
+                            <!-- Chapter Navigation Buttons -->
+                            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                <button type="button" id="tp-prev-chapter-btn" class="secondary-btn" style="padding: 0.4rem 0.85rem; font-size: 0.88rem; cursor: pointer;">
+                                    <i class="fa-solid fa-chevron-right"></i> פרק קודם
+                                </button>
+                                <button type="button" id="tp-next-chapter-btn" class="secondary-btn" style="padding: 0.4rem 0.85rem; font-size: 0.88rem; cursor: pointer;">
+                                    פרק הבא <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Search / Filter input -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 220px; max-width: 380px;">
+                            <div class="search-input-wrapper" style="width: 100%; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="tp-search-input" class="search-input" placeholder="חיפוש מילה בפסוקים או בפשט..." style="padding: 0.45rem 2.2rem 0.45rem 0.85rem; font-size: 0.92rem;">
+                            </div>
+                            <button type="button" id="tp-search-clear-btn" title="נקה חיפוש" style="display: none; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Display Options Bar -->
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <!-- Layout toggle (Split side-by-side vs Row-by-row) -->
+                            <div style="display: flex; background: var(--bg-secondary); border-radius: 20px; padding: 2px; border: 1px solid var(--border-color);">
+                                <button type="button" id="tp-layout-split" class="pv-toggle-btn active" style="padding: 0.28rem 0.85rem; font-size: 0.85rem; border-radius: 18px; border: none; cursor: pointer; background: var(--accent-gold); color: #1a1a2e; font-weight: bold;">
+                                    <i class="fa-solid fa-columns"></i> צד לצד (פיצול מסך)
+                                </button>
+                                <button type="button" id="tp-layout-rows" class="pv-toggle-btn" style="padding: 0.28rem 0.85rem; font-size: 0.85rem; border-radius: 18px; border: none; cursor: pointer; background: transparent; color: var(--text-muted);">
+                                    <i class="fa-solid fa-bars"></i> שורה אחר שורה
+                                </button>
+                            </div>
+
+                            <!-- Nikud toggle -->
+                            <div style="display: flex; background: var(--bg-secondary); border-radius: 20px; padding: 2px; border: 1px solid var(--border-color);">
+                                <button type="button" id="tp-nikud-with" class="pv-toggle-btn active" style="padding: 0.25rem 0.75rem; font-size: 0.82rem; border-radius: 18px; border: none; cursor: pointer; background: var(--accent-gold); color: #1a1a2e; font-weight: bold;">
+                                    עם ניקוד
+                                </button>
+                                <button type="button" id="tp-nikud-without" class="pv-toggle-btn" style="padding: 0.25rem 0.75rem; font-size: 0.82rem; border-radius: 18px; border: none; cursor: pointer; background: transparent; color: var(--text-muted);">
+                                    ללא ניקוד
+                                </button>
+                            </div>
+
+                            <!-- Verse numbers toggle -->
+                            <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="tp-show-verse-numbers" checked style="cursor: pointer;">
+                                מספור פסוקים
+                            </label>
+                        </div>
+
+                        <!-- Actions & Font size -->
+                        <div style="display: flex; gap: 0.6rem; align-items: center;">
+                            <!-- Font size adjustment -->
+                            <div style="display: flex; align-items: center; gap: 0.25rem; border: 1px solid var(--border-gold); border-radius: var(--border-radius-sm); padding: 0.15rem 0.4rem;">
+                                <button type="button" id="tp-font-dec" title="הקטן גופן" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 0.85rem; font-weight: bold; padding: 0.1rem 0.35rem;">א-</button>
+                                <span id="tp-font-size-val" style="font-size: 0.75rem; color: var(--text-muted); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0 0.3rem;">22</span>
+                                <button type="button" id="tp-font-inc" title="הגדל גופן" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 1.05rem; font-weight: bold; padding: 0.1rem 0.35rem;">א+</button>
+                            </div>
+
+                            <!-- Copy text button -->
+                            <button type="button" id="tp-copy-btn" class="category-tab" style="padding: 0.3rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
+                                <i class="fa-solid fa-copy"></i> העתק מקרא ופשט
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stats & Info Ribbon -->
+                    <div id="tp-stats-ribbon" style="background: rgba(var(--accent-gold-rgb), 0.06); border: 1px solid var(--border-gold); border-radius: var(--border-radius-md); padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <!-- Text & Peshat Main Card -->
+                    <div id="tp-text-card" style="background: var(--bg-card); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 2rem 2.2rem; box-shadow: var(--shadow-card); min-height: 400px; position: relative;">
+                        <div id="tp-text-content" style="font-size: 1.35rem; direction: rtl; color: var(--text-primary); transition: font-size 0.2s;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Verse Quick Action / Detail Modal Panel -->
+                    <div id="tp-verse-detail-panel" style="display: none; margin-top: 1.5rem; background: var(--bg-secondary); border: 1px solid var(--border-gold); border-radius: var(--border-radius-lg); padding: 1.5rem 2rem; position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <h4 id="tp-verse-detail-title" style="color: var(--accent-gold); margin: 0; font-size: 1.2rem;">
+                                <i class="fa-solid fa-book-open"></i> פסוק נבחר
+                            </h4>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button type="button" id="tp-verse-detail-copy" class="category-tab" style="padding: 0.2rem 0.6rem; font-size: 0.8rem; cursor: pointer; color: var(--accent-gold); border-color: var(--border-gold);">
+                                    <i class="fa-solid fa-copy"></i> העתק
+                                </button>
+                                <button type="button" id="tp-verse-detail-analyze" class="primary-btn" style="padding: 0.2rem 0.75rem; font-size: 0.8rem; cursor: pointer;">
+                                    <i class="fa-solid fa-magnifying-glass-chart"></i> נתח פסוק זה
+                                </button>
+                                <button type="button" onclick="document.getElementById('tp-verse-detail-panel').style.display='none';" style="background: none; border: 1px solid var(--border-color); color: var(--text-muted); padding: 0.2rem 0.5rem; border-radius: var(--border-radius-sm); cursor: pointer; font-size: 1rem;">✕</button>
+                            </div>
+                        </div>
+                        <div id="tp-verse-detail-mikra" style="font-family: var(--font-serif); font-size: 1.45rem; line-height: 1.8; margin-bottom: 0.75rem; color: var(--text-primary); text-align: center;"></div>
+                        <div id="tp-verse-detail-peshat" style="font-family: var(--font-sans); font-size: 1.15rem; line-height: 1.8; margin-bottom: 0.75rem; color: var(--accent-gold); text-align: center; background: rgba(var(--accent-gold-rgb), 0.05); padding: 0.75rem; border-radius: var(--border-radius-sm);"></div>
+                        <div id="tp-verse-detail-meta" style="display: flex; gap: 1.5rem; font-size: 0.95rem; color: var(--text-muted); justify-content: center; flex-wrap: wrap;"></div>
+                    </div>
+                </div>
+            </section>
+
             <section id="admin-requests-view" class="page-view">
                 <div class="editor-container" style="max-width: 900px;">
                     <h2 class="logo-title" style="font-size: 2.2rem; text-align: center; margin-bottom: 0.5rem;"><i class="fa-solid fa-clipboard-check"></i> ניהול בקשות פרסום</h2>
@@ -1302,6 +1439,8 @@
     <script src="parashot_data.js"></script>
     <script src="peshat_bereshit.js"></script>
     <script src="peshat_shemot.js"></script>
+    <script src="peshat_tehillim.js"></script>
+    <script src="peshat_mishlei.js"></script>
     <script src="data.js"></script>
     <script src="parser.js"></script>
     <script src="app.js"></script>

@@ -2057,6 +2057,207 @@ body[data-bg="dark"] .index-chapter-btn.has-commentaries:hover {
     }
 }
 
+/* ============================================================
+   Tanakh Peshat View (פשט תנ"ך) Styles
+   ============================================================ */
+
+.tp-split-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: stretch;
+    direction: rtl;
+    width: 100%;
+}
+
+.tp-split-column {
+    background: rgba(var(--accent-gold-rgb), 0.025);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 1.25rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.tp-split-col-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    color: var(--accent-gold);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.15rem;
+    border-bottom: 2px solid rgba(var(--accent-gold-rgb), 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tp-split-col-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.tp-split-verse-item, .tp-split-peshat-item {
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    border-bottom: 1px dashed rgba(var(--accent-gold-rgb), 0.2);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    line-height: 1.9;
+}
+
+.tp-split-verse-item {
+    font-family: var(--font-serif);
+    color: var(--text-primary);
+}
+
+.tp-split-peshat-item {
+    font-family: var(--font-sans);
+    color: var(--text-secondary);
+}
+
+.tp-split-verse-item:hover, .tp-split-peshat-item:hover {
+    background: rgba(var(--accent-gold-rgb), 0.08);
+}
+
+.tp-hover-sync {
+    background: rgba(var(--accent-gold-rgb), 0.18) !important;
+    color: var(--accent-gold) !important;
+    border-radius: var(--border-radius-sm);
+}
+
+.tp-selected-sync {
+    background: rgba(var(--accent-gold-rgb), 0.28) !important;
+    outline: 2px solid var(--accent-gold);
+    border-radius: var(--border-radius-sm);
+}
+
+/* Rows Layout */
+.tp-rows-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    direction: rtl;
+}
+
+.tp-row-card {
+    background: rgba(var(--accent-gold-rgb), 0.03);
+    border: 1px solid var(--border-color);
+    border-right: 4px solid var(--accent-gold);
+    border-radius: var(--border-radius-md);
+    padding: 1.1rem 1.4rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.tp-row-card:hover {
+    background: rgba(var(--accent-gold-rgb), 0.07);
+    border-color: var(--border-gold);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.tp-row-card.tp-selected-sync {
+    background: rgba(var(--accent-gold-rgb), 0.12) !important;
+    border-color: var(--accent-gold);
+    outline: 1.5px solid var(--accent-gold);
+}
+
+.tp-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(var(--accent-gold-rgb), 0.15);
+    font-size: 0.88rem;
+}
+
+.tp-row-meta {
+    font-weight: 700;
+    color: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.tp-row-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.tp-row-mikra {
+    font-family: var(--font-serif);
+    font-size: 1.35em;
+    line-height: 1.9;
+    color: var(--text-primary);
+    margin-bottom: 0.65rem;
+}
+
+.tp-row-peshat {
+    font-family: var(--font-sans);
+    font-size: 1.05em;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    background: rgba(var(--accent-gold-rgb), 0.05);
+    padding: 0.65rem 0.95rem;
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+}
+
+.tp-row-peshat-badge {
+    background: var(--accent-gold);
+    color: #1a1a2e;
+    font-size: 0.72rem;
+    font-weight: bold;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.tp-verse-num {
+    color: var(--accent-gold);
+    font-weight: bold;
+    font-family: var(--font-serif);
+    min-width: 32px;
+    user-select: none;
+}
+
+.tp-highlight {
+    background: #ffec99;
+    color: #212529;
+    padding: 0.05rem 0.25rem;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.tp-notice-box {
+    padding: 2rem;
+    background: rgba(var(--accent-gold-rgb), 0.08);
+    border: 1px solid var(--border-gold);
+    border-radius: var(--border-radius-md);
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    line-height: 1.9;
+}
+
+@media (max-width: 900px) {
+    .tp-split-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 
 
 
