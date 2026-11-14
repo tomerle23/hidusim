@@ -264,6 +264,46 @@ body[data-bg="dark"] .logo-title {
     max-width: 1400px;
     width: 100%;
     margin: 0 auto;
+    transition: max-width 0.25s ease, padding 0.25s ease;
+}
+
+/* Full Width Expansion for Content Display Views */
+.main-content.full-width-view,
+.main-content:has(#tanakh-peshat-view.active),
+.main-content:has(#parashot-view.active) {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 1.25rem 2rem !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.main-content.full-width-view.boxed-view,
+.main-content:has(#tanakh-peshat-view.active).boxed-view {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 2rem !important;
+}
+
+#tanakh-peshat-view,
+#parashot-view {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.tp-main-container,
+.pv-main-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+}
+
+#tp-text-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1.5rem 2rem !important;
+    box-sizing: border-box !important;
 }
 
 .page-view {
@@ -2261,3 +2301,160 @@ body[data-bg="dark"] .index-chapter-btn.has-commentaries:hover {
 
 
 
+
+
+/* --- Tanakh Peshat: Chapter Read & Completion Tracking --- */
+.tp-read-toggle-btn {
+    border: 1.5px solid #27ae60;
+    border-radius: 20px;
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    transition: all 0.2s ease;
+    user-select: none;
+    outline: none;
+}
+
+.tp-read-toggle-btn.unread {
+    background: var(--bg-card);
+    color: #27ae60;
+}
+
+.tp-read-toggle-btn.unread:hover {
+    background: rgba(39, 174, 96, 0.12);
+    transform: translateY(-1px);
+}
+
+.tp-read-toggle-btn.read {
+    background: #27ae60;
+    color: #ffffff;
+    box-shadow: 0 2px 10px rgba(39, 174, 96, 0.35);
+}
+
+.tp-read-toggle-btn.read:hover {
+    background: #219653;
+    border-color: #219653;
+    transform: translateY(-1px);
+}
+
+.tp-chapter-pills-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 0.85rem 1.15rem;
+    margin-bottom: 1.25rem;
+}
+
+.tp-chapter-pills-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.65rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.tp-chapter-pills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.tp-ch-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 14px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.82rem;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    user-select: none;
+}
+
+.tp-ch-pill:hover {
+    border-color: var(--accent-gold);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.tp-ch-pill.active {
+    outline: 2px solid var(--accent-gold);
+    font-weight: bold;
+}
+
+.tp-ch-pill.completed {
+    background: #27ae60 !important;
+    color: #ffffff !important;
+    border-color: #219653 !important;
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(39, 174, 96, 0.25);
+}
+
+.tp-ch-pill.completed:hover {
+    background: #219653 !important;
+}
+
+.tp-ch-pill.completed.active {
+    outline: 2px solid #f1c40f !important;
+}
+
+.tp-progress-bar-wrap {
+    width: 140px;
+    height: 8px;
+    background: rgba(var(--accent-gold-rgb), 0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.tp-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60, #2ecc71);
+    border-radius: 10px;
+    transition: width 0.35s ease;
+}
+
+.tp-chapter-completed-badge {
+    background: rgba(39, 174, 96, 0.18);
+    color: #27ae60;
+    border: 1.5px solid #27ae60;
+    border-radius: 20px;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 1px 6px rgba(39, 174, 96, 0.2);
+}
+
+.tp-end-chapter-box {
+    background: rgba(var(--accent-gold-rgb), 0.05);
+    border: 1.5px dashed var(--border-gold);
+    border-radius: var(--border-radius-md);
+    padding: 1.5rem;
+    text-align: center;
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.tp-end-chapter-box.completed {
+    background: rgba(39, 174, 96, 0.08);
+    border-color: #27ae60;
+    border-style: solid;
+}

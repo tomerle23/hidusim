@@ -891,7 +891,7 @@
 
             <!-- VIEW: PARASHOT & ALIYOT CONTINUOUS READING -->
             <section id="parashot-view" class="page-view">
-                <div class="gematria-calc-container" style="max-width: 1200px; margin: 0 auto; width: 100%;">
+                <div class="pv-main-container" style="max-width: 100%; margin: 0 auto; width: 100%;">
                     <!-- Header -->
                     <div style="text-align: center; margin-bottom: 1.5rem;">
                         <h2 class="logo-title" style="font-size: 2.2rem; margin-bottom: 0.4rem;">
@@ -1056,7 +1056,7 @@
 
             <!-- VIEW: TANAKH PESHAT (פשט תנ"ך) -->
             <section id="tanakh-peshat-view" class="page-view">
-                <div class="gematria-calc-container" style="max-width: 1250px; margin: 0 auto; width: 100%;">
+                <div class="tp-main-container" style="max-width: 100%; margin: 0 auto; width: 100%;">
                     <!-- Header -->
                     <div style="text-align: center; margin-bottom: 1.5rem;">
                         <h2 class="logo-title" style="font-size: 2.2rem; margin-bottom: 0.4rem;">
@@ -1094,6 +1094,10 @@
                                 <button type="button" id="tp-next-chapter-btn" class="secondary-btn" style="padding: 0.4rem 0.85rem; font-size: 0.88rem; cursor: pointer;">
                                     פרק הבא <i class="fa-solid fa-chevron-left"></i>
                                 </button>
+                                <!-- Mark Chapter as Read Button -->
+                                <button type="button" id="tp-mark-read-btn" class="tp-read-toggle-btn unread" title="סמן שלמדת/קראת פרק זה">
+                                    <i class="fa-regular fa-circle-check"></i> <span>קראתי את הפרק</span>
+                                </button>
                             </div>
                         </div>
 
@@ -1105,6 +1109,11 @@
                             </div>
                             <button type="button" id="tp-search-clear-btn" title="נקה חיפוש" style="display: none; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;">✕</button>
                         </div>
+                    </div>
+
+                    <!-- Chapter Progress & Quick Navigation Pills Bar -->
+                    <div id="tp-chapter-pills-box" class="tp-chapter-pills-container">
+                        <!-- Populated dynamically with green completed indicators -->
                     </div>
 
                     <!-- Display Options Bar -->
@@ -1145,6 +1154,11 @@
                                 <span id="tp-font-size-val" style="font-size: 0.75rem; color: var(--text-muted); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0 0.3rem;">22</span>
                                 <button type="button" id="tp-font-inc" title="הגדל גופן" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 1.05rem; font-weight: bold; padding: 0.1rem 0.35rem;">א+</button>
                             </div>
+
+                            <!-- Full Width toggle button -->
+                            <button type="button" id="tp-width-toggle-btn" class="category-tab active" title="החלף בין תצוגת מסך מלאה לתצוגה ממורכזת" style="padding: 0.3rem 0.75rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer; border-radius: var(--border-radius-sm);">
+                                <i class="fa-solid fa-arrows-left-right"></i> <span id="tp-width-toggle-text">מסך רחב מלא</span>
+                            </button>
 
                             <!-- Copy text button -->
                             <button type="button" id="tp-copy-btn" class="category-tab" style="padding: 0.3rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent-gold); border-color: var(--border-gold); cursor: pointer;">
@@ -1441,6 +1455,17 @@
     <script src="peshat_shemot.js"></script>
     <script src="peshat_tehillim.js"></script>
     <script src="peshat_mishlei.js"></script>
+    <script src="peshat_iyov.js"></script>
+    <script src="peshat_shir_hashirim.js"></script>
+    <script src="peshat_ruth.js"></script>
+    <script src="peshat_eikhah.js"></script>
+    <script src="peshat_kohelet.js"></script>
+    <script src="peshat_esther.js"></script>
+    <script src="peshat_daniel.js"></script>
+    <script src="peshat_ezra.js"></script>
+    <script src="peshat_nehemiah.js"></script>
+    <script src="peshat_1chronicles.js"></script>
+    <script src="peshat_2chronicles.js"></script>
     <script src="data.js"></script>
     <script src="parser.js"></script>
     <script src="app.js"></script>

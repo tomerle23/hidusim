@@ -820,6 +820,15 @@ function initNavigation() {
             });
             
             State.activeView = targetId;
+
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                if (targetId === 'tanakh-peshat-view' || targetId === 'parashot-view') {
+                    mainContent.classList.add('full-width-view');
+                } else {
+                    mainContent.classList.remove('full-width-view');
+                }
+            }
             
             if (targetId === 'study-hall-view') {
                 renderInsightsGrid();
@@ -936,6 +945,15 @@ function switchView(viewId) {
         }
     });
     State.activeView = viewId;
+
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        if (viewId === 'tanakh-peshat-view' || viewId === 'parashot-view') {
+            mainContent.classList.add('full-width-view');
+        } else {
+            mainContent.classList.remove('full-width-view');
+        }
+    }
 }
 
 function applyRoleSettings() {
@@ -6588,6 +6606,39 @@ function initParashotView() {
         if (v.bookHeb === 'משלי' && typeof window.PeshatMishlei !== 'undefined') {
             return window.PeshatMishlei[pKey] || '';
         }
+        if (v.bookHeb === 'איוב' && typeof window.PeshatIyov !== 'undefined') {
+            return window.PeshatIyov[pKey] || '';
+        }
+        if (v.bookHeb === 'שיר השירים' && typeof window.PeshatShirHashirim !== 'undefined') {
+            return window.PeshatShirHashirim[pKey] || '';
+        }
+        if (v.bookHeb === 'רות' && typeof window.PeshatRuth !== 'undefined') {
+            return window.PeshatRuth[pKey] || '';
+        }
+        if (v.bookHeb === 'איכה' && typeof window.PeshatEikhah !== 'undefined') {
+            return window.PeshatEikhah[pKey] || '';
+        }
+        if (v.bookHeb === 'קהלת' && typeof window.PeshatKohelet !== 'undefined') {
+            return window.PeshatKohelet[pKey] || '';
+        }
+        if (v.bookHeb === 'אסתר' && typeof window.PeshatEsther !== 'undefined') {
+            return window.PeshatEsther[pKey] || '';
+        }
+        if (v.bookHeb === 'דניאל' && typeof window.PeshatDaniel !== 'undefined') {
+            return window.PeshatDaniel[pKey] || '';
+        }
+        if (v.bookHeb === 'עזרא' && typeof window.PeshatEzra !== 'undefined') {
+            return window.PeshatEzra[pKey] || '';
+        }
+        if (v.bookHeb === 'נחמיה' && typeof window.PeshatNehemiah !== 'undefined') {
+            return window.PeshatNehemiah[pKey] || '';
+        }
+        if (v.bookHeb === 'דברי הימים א' && typeof window.Peshat1Chronicles !== 'undefined') {
+            return window.Peshat1Chronicles[pKey] || '';
+        }
+        if (v.bookHeb === 'דברי הימים ב' && typeof window.Peshat2Chronicles !== 'undefined') {
+            return window.Peshat2Chronicles[pKey] || '';
+        }
         return '';
     }
 
@@ -6595,7 +6646,18 @@ function initParashotView() {
         return (bookHeb === 'בראשית' && typeof window.PeshatBereshit !== 'undefined') ||
                (bookHeb === 'שמות' && typeof window.PeshatShemot !== 'undefined') ||
                (bookHeb === 'תהילים' && typeof window.PeshatTehillim !== 'undefined') ||
-               (bookHeb === 'משלי' && typeof window.PeshatMishlei !== 'undefined');
+               (bookHeb === 'משלי' && typeof window.PeshatMishlei !== 'undefined') ||
+               (bookHeb === 'איוב' && typeof window.PeshatIyov !== 'undefined') ||
+               (bookHeb === 'שיר השירים' && typeof window.PeshatShirHashirim !== 'undefined') ||
+               (bookHeb === 'רות' && typeof window.PeshatRuth !== 'undefined') ||
+               (bookHeb === 'איכה' && typeof window.PeshatEikhah !== 'undefined') ||
+               (bookHeb === 'קהלת' && typeof window.PeshatKohelet !== 'undefined') ||
+               (bookHeb === 'אסתר' && typeof window.PeshatEsther !== 'undefined') ||
+               (bookHeb === 'דניאל' && typeof window.PeshatDaniel !== 'undefined') ||
+               (bookHeb === 'עזרא' && typeof window.PeshatEzra !== 'undefined') ||
+               (bookHeb === 'נחמיה' && typeof window.PeshatNehemiah !== 'undefined') ||
+               (bookHeb === 'דברי הימים א' && typeof window.Peshat1Chronicles !== 'undefined') ||
+               (bookHeb === 'דברי הימים ב' && typeof window.Peshat2Chronicles !== 'undefined');
     }
 
     // Copy text button
@@ -7119,6 +7181,8 @@ function initTanakhPeshatView() {
     const chapterSelect = document.getElementById('tp-chapter-select');
     const prevChapterBtn = document.getElementById('tp-prev-chapter-btn');
     const nextChapterBtn = document.getElementById('tp-next-chapter-btn');
+    const markReadBtn = document.getElementById('tp-mark-read-btn');
+    const chapterPillsBox = document.getElementById('tp-chapter-pills-box');
     const searchInput = document.getElementById('tp-search-input');
     const searchClearBtn = document.getElementById('tp-search-clear-btn');
     const layoutSplitBtn = document.getElementById('tp-layout-split');
@@ -7129,6 +7193,8 @@ function initTanakhPeshatView() {
     const fontIncBtn = document.getElementById('tp-font-inc');
     const fontDecBtn = document.getElementById('tp-font-dec');
     const fontSizeVal = document.getElementById('tp-font-size-val');
+    const widthToggleBtn = document.getElementById('tp-width-toggle-btn');
+    const widthToggleText = document.getElementById('tp-width-toggle-text');
     const copyBtn = document.getElementById('tp-copy-btn');
     const statsRibbon = document.getElementById('tp-stats-ribbon');
     const textContent = document.getElementById('tp-text-content');
@@ -7153,6 +7219,151 @@ function initTanakhPeshatView() {
         selectedVerse: null
     };
 
+    // --- Chapter Read Tracking (localStorage) ---
+    const STORAGE_KEY = 'tanakh_peshat_read_chapters';
+
+    function getReadChaptersMap() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function isChapterRead(book, chapter) {
+        if (chapter === 'all' || !chapter) return false;
+        const map = getReadChaptersMap();
+        return !!map[`${book}_${chapter}`];
+    }
+
+    function setChapterReadStatus(book, chapter, isRead) {
+        if (chapter === 'all' || !chapter) return;
+        const map = getReadChaptersMap();
+        const key = `${book}_${chapter}`;
+        if (isRead) {
+            map[key] = true;
+        } else {
+            delete map[key];
+        }
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+        } catch (e) {}
+    }
+
+    function toggleChapterReadStatus(book, chapter) {
+        if (chapter === 'all' || !chapter) return false;
+        const nextState = !isChapterRead(book, chapter);
+        setChapterReadStatus(book, chapter, nextState);
+        return nextState;
+    }
+
+    function getBookReadStats(book) {
+        const maxChap = getMaxChapter(book);
+        const map = getReadChaptersMap();
+        let readCount = 0;
+        for (let c = 1; c <= maxChap; c++) {
+            if (map[`${book}_${c}`]) readCount++;
+        }
+        return {
+            readCount,
+            totalChapters: maxChap,
+            percent: maxChap > 0 ? Math.round((readCount / maxChap) * 100) : 0
+        };
+    }
+
+    function updateMarkReadBtn() {
+        if (!markReadBtn) return;
+        if (TpState.chapter === 'all') {
+            markReadBtn.style.opacity = '0.5';
+            markReadBtn.style.pointerEvents = 'none';
+            markReadBtn.className = 'tp-read-toggle-btn unread';
+            markReadBtn.innerHTML = '<i class="fa-regular fa-circle-check"></i> <span>קראתי את הפרק</span>';
+            markReadBtn.title = 'בחר פרק ספציפי לסימון קריאה';
+            return;
+        }
+        markReadBtn.style.opacity = '1';
+        markReadBtn.style.pointerEvents = 'auto';
+        const read = isChapterRead(TpState.book, TpState.chapter);
+        if (read) {
+            markReadBtn.className = 'tp-read-toggle-btn read';
+            markReadBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>קראתי! פרק זה הושלם</span>';
+            markReadBtn.title = 'לחץ כדי לבטל את סימון הקריאה לפרק זה';
+        } else {
+            markReadBtn.className = 'tp-read-toggle-btn unread';
+            markReadBtn.innerHTML = '<i class="fa-regular fa-circle-check"></i> <span>קראתי את הפרק</span>';
+            markReadBtn.title = 'לחץ לסימון שלמדת/קראת פרק זה';
+        }
+    }
+
+    function renderChapterPills() {
+        if (!chapterPillsBox) return;
+        const maxChap = getMaxChapter(TpState.book);
+        const stats = getBookReadStats(TpState.book);
+
+        let pillsHtml = `
+            <div class="tp-chapter-pills-header">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <i class="fa-solid fa-bookmark" style="color: #27ae60;"></i>
+                    <strong style="color: var(--text-primary);">התקדמות קריאה לספר ${TpState.book}:</strong>
+                    <span style="background: rgba(39, 174, 96, 0.15); color: #27ae60; border: 1px solid #27ae60; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.8rem;">
+                        הושלמו ${stats.readCount} מתוך ${stats.totalChapters} פרקים (${stats.percent}%)
+                    </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <div class="tp-progress-bar-wrap" title="${stats.percent}% הושלמו">
+                        <div class="tp-progress-bar-fill" style="width: ${stats.percent}%;"></div>
+                    </div>
+                    <button type="button" class="tp-pill-mark-all-btn" title="סמן את כל פרקי הספר כנקראו / אפס" style="background: transparent; border: 1px dashed rgba(39, 174, 96, 0.5); color: #2ecc71; border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.75rem; cursor: pointer; transition: all 0.2s ease;">
+                        <i class="fa-solid fa-check-double"></i> ${stats.readCount === stats.totalChapters ? 'אפס הכל' : 'סמן הכל כהושלם'}
+                    </button>
+                </div>
+            </div>
+            <div class="tp-chapter-pills-list">
+        `;
+
+        for (let c = 1; c <= maxChap; c++) {
+            const read = isChapterRead(TpState.book, c);
+            const active = (TpState.chapter === c);
+            const cHeb = numberToHebrew(c);
+            const classes = ['tp-ch-pill'];
+            if (read) classes.push('completed');
+            if (active) classes.push('active');
+
+            pillsHtml += `
+                <button type="button" class="${classes.join(' ')}" data-chapter="${c}" title="פרק ${cHeb}${read ? ' - הושלם ✓' : ' - טרם הושלם'}">
+                    <span>${cHeb}</span>
+                    ${read ? '<i class="fa-solid fa-check" style="font-size: 0.72rem; margin-right: 0.2rem;"></i>' : ''}
+                </button>
+            `;
+        }
+        pillsHtml += `</div>`;
+        chapterPillsBox.innerHTML = pillsHtml;
+
+        // Pill clicks
+        chapterPillsBox.querySelectorAll('.tp-ch-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const chap = parseInt(btn.getAttribute('data-chapter'), 10);
+                TpState.chapter = chap;
+                chapterSelect.value = chap.toString();
+                renderView();
+            });
+        });
+
+        // Mark all click
+        const markAllBtn = chapterPillsBox.querySelector('.tp-pill-mark-all-btn');
+        if (markAllBtn) {
+            markAllBtn.addEventListener('click', () => {
+                const allDone = stats.readCount === stats.totalChapters;
+                for (let c = 1; c <= maxChap; c++) {
+                    setChapterReadStatus(TpState.book, c, !allDone);
+                }
+                updateChapterSelect();
+                renderView();
+            });
+        }
+    }
+
     // Helper: get peshat text for a verse
     function getVersePeshat(v) {
         if (!v) return '';
@@ -7169,6 +7380,39 @@ function initTanakhPeshatView() {
         if (v.bookHeb === 'משלי' && typeof window.PeshatMishlei !== 'undefined') {
             return window.PeshatMishlei[pKey] || '';
         }
+        if (v.bookHeb === 'איוב' && typeof window.PeshatIyov !== 'undefined') {
+            return window.PeshatIyov[pKey] || '';
+        }
+        if (v.bookHeb === 'שיר השירים' && typeof window.PeshatShirHashirim !== 'undefined') {
+            return window.PeshatShirHashirim[pKey] || '';
+        }
+        if (v.bookHeb === 'רות' && typeof window.PeshatRuth !== 'undefined') {
+            return window.PeshatRuth[pKey] || '';
+        }
+        if (v.bookHeb === 'איכה' && typeof window.PeshatEikhah !== 'undefined') {
+            return window.PeshatEikhah[pKey] || '';
+        }
+        if (v.bookHeb === 'קהלת' && typeof window.PeshatKohelet !== 'undefined') {
+            return window.PeshatKohelet[pKey] || '';
+        }
+        if (v.bookHeb === 'אסתר' && typeof window.PeshatEsther !== 'undefined') {
+            return window.PeshatEsther[pKey] || '';
+        }
+        if (v.bookHeb === 'דניאל' && typeof window.PeshatDaniel !== 'undefined') {
+            return window.PeshatDaniel[pKey] || '';
+        }
+        if (v.bookHeb === 'עזרא' && typeof window.PeshatEzra !== 'undefined') {
+            return window.PeshatEzra[pKey] || '';
+        }
+        if (v.bookHeb === 'נחמיה' && typeof window.PeshatNehemiah !== 'undefined') {
+            return window.PeshatNehemiah[pKey] || '';
+        }
+        if (v.bookHeb === 'דברי הימים א' && typeof window.Peshat1Chronicles !== 'undefined') {
+            return window.Peshat1Chronicles[pKey] || '';
+        }
+        if (v.bookHeb === 'דברי הימים ב' && typeof window.Peshat2Chronicles !== 'undefined') {
+            return window.Peshat2Chronicles[pKey] || '';
+        }
         return '';
     }
 
@@ -7176,7 +7420,18 @@ function initTanakhPeshatView() {
         return (bookHeb === 'בראשית' && typeof window.PeshatBereshit !== 'undefined') ||
                (bookHeb === 'שמות' && typeof window.PeshatShemot !== 'undefined') ||
                (bookHeb === 'תהילים' && typeof window.PeshatTehillim !== 'undefined') ||
-               (bookHeb === 'משלי' && typeof window.PeshatMishlei !== 'undefined');
+               (bookHeb === 'משלי' && typeof window.PeshatMishlei !== 'undefined') ||
+               (bookHeb === 'איוב' && typeof window.PeshatIyov !== 'undefined') ||
+               (bookHeb === 'שיר השירים' && typeof window.PeshatShirHashirim !== 'undefined') ||
+               (bookHeb === 'רות' && typeof window.PeshatRuth !== 'undefined') ||
+               (bookHeb === 'איכה' && typeof window.PeshatEikhah !== 'undefined') ||
+               (bookHeb === 'קהלת' && typeof window.PeshatKohelet !== 'undefined') ||
+               (bookHeb === 'אסתר' && typeof window.PeshatEsther !== 'undefined') ||
+               (bookHeb === 'דניאל' && typeof window.PeshatDaniel !== 'undefined') ||
+               (bookHeb === 'עזרא' && typeof window.PeshatEzra !== 'undefined') ||
+               (bookHeb === 'נחמיה' && typeof window.PeshatNehemiah !== 'undefined') ||
+               (bookHeb === 'דברי הימים א' && typeof window.Peshat1Chronicles !== 'undefined') ||
+               (bookHeb === 'דברי הימים ב' && typeof window.Peshat2Chronicles !== 'undefined');
     }
 
     // Populate Book Select
@@ -7192,7 +7447,18 @@ function initTanakhPeshatView() {
             label: "כתובים עם ביאור פשט מלא",
             books: [
                 { heb: "תהילים", subtitle: "ביאור מלא - 2,527 פסוקים" },
-                { heb: "משלי", subtitle: "ביאור מלא - 915 פסוקים" }
+                { heb: "משלי", subtitle: "ביאור מלא - 915 פסוקים" },
+                { heb: "איוב", subtitle: "ביאור מלא - 1,070 פסוקים" },
+                { heb: "שיר השירים", subtitle: "ביאור מלא - 117 פסוקים" },
+                { heb: "רות", subtitle: "ביאור מלא - 85 פסוקים" },
+                { heb: "איכה", subtitle: "ביאור מלא - 154 פסוקים" },
+                { heb: "קהלת", subtitle: "ביאור מלא - 222 פסוקים" },
+                { heb: "אסתר", subtitle: "ביאור מלא - 167 פסוקים" },
+                { heb: "דניאל", subtitle: "ביאור מלא - 357 פסוקים" },
+                { heb: "עזרא", subtitle: "ביאור מלא - 280 פסוקים" },
+                { heb: "נחמיה", subtitle: "ביאור מלא - 405 פסוקים" },
+                { heb: "דברי הימים א", subtitle: "ביאור מלא - 943 פסוקים" },
+                { heb: "דברי הימים ב", subtitle: "ביאור מלא - 822 פסוקים" }
             ]
         },
         {
@@ -7211,14 +7477,6 @@ function initTanakhPeshatView() {
                 { heb: "יחזקאל" }, { heb: "הושע" }, { heb: "יואל" }, { heb: "עמוס" },
                 { heb: "עובדיה" }, { heb: "יונה" }, { heb: "מיכה" }, { heb: "נחום" },
                 { heb: "חבקוק" }, { heb: "צפניה" }, { heb: "חגי" }, { heb: "זכריה" }, { heb: "מלאכי" }
-            ]
-        },
-        {
-            label: "כתובים נוספים (ביאור בפיתוח)",
-            books: [
-                { heb: "איוב" }, { heb: "שיר השירים" },
-                { heb: "רות" }, { heb: "איכה" }, { heb: "קהלת" }, { heb: "אסתר" },
-                { heb: "דניאל" }, { heb: "עזרא" }, { heb: "נחמיה" }, { heb: "דברי הימים א" }, { heb: "דברי הימים ב" }
             ]
         }
     ];
@@ -7262,7 +7520,12 @@ function initTanakhPeshatView() {
         for (let c = 1; c <= maxChap; c++) {
             const opt = document.createElement('option');
             opt.value = c;
-            opt.textContent = `פרק ${numberToHebrew(c)}`;
+            const read = isChapterRead(TpState.book, c);
+            opt.textContent = `פרק ${numberToHebrew(c)}${read ? ' ✓ [הושלם]' : ''}`;
+            if (read) {
+                opt.style.color = '#27ae60';
+                opt.style.fontWeight = 'bold';
+            }
             if (TpState.chapter === c) opt.selected = true;
             chapterSelect.appendChild(opt);
         }
@@ -7320,6 +7583,16 @@ function initTanakhPeshatView() {
                 TpState.chapter = 1;
             }
             chapterSelect.value = TpState.chapter.toString();
+            renderView();
+        });
+    }
+
+    // Event: Mark Read Button (top bar)
+    if (markReadBtn) {
+        markReadBtn.addEventListener('click', () => {
+            if (TpState.chapter === 'all') return;
+            toggleChapterReadStatus(TpState.book, TpState.chapter);
+            updateChapterSelect();
             renderView();
         });
     }
@@ -7507,6 +7780,24 @@ function initTanakhPeshatView() {
         });
     }
 
+    // Event: Full width toggle
+    if (widthToggleBtn) {
+        widthToggleBtn.addEventListener('click', () => {
+            const mainContent = document.querySelector('.main-content');
+            if (!mainContent) return;
+            const isBoxed = mainContent.classList.toggle('boxed-view');
+            if (isBoxed) {
+                widthToggleBtn.classList.remove('active');
+                if (widthToggleText) widthToggleText.textContent = 'רוחב מרוכז';
+                widthToggleBtn.title = 'לחץ להרחבה על כל רוחב המסך';
+            } else {
+                widthToggleBtn.classList.add('active');
+                if (widthToggleText) widthToggleText.textContent = 'מסך רחב מלא';
+                widthToggleBtn.title = 'לחץ לצמצום לרוחב מרוכז';
+            }
+        });
+    }
+
     // Copy Current View
     if (copyBtn) {
         copyBtn.addEventListener('click', () => {
@@ -7573,6 +7864,15 @@ function initTanakhPeshatView() {
             `;
         }
 
+        let chapterReadBadge = '';
+        if (TpState.chapter !== 'all' && isChapterRead(TpState.book, TpState.chapter)) {
+            chapterReadBadge = `
+                <span class="tp-chapter-completed-badge">
+                    <i class="fa-solid fa-circle-check"></i> פרק זה הושלם ✓
+                </span>
+            `;
+        }
+
         let filterText = '';
         if (TpState.searchQuery) {
             filterText = `<span style="color: var(--accent-gold); font-size: 0.9rem;">(נמצאו ${visibleCount} פסוקים מתוך ${totalCount} לפי החיפוש)</span>`;
@@ -7587,7 +7887,8 @@ function initTanakhPeshatView() {
                 </div>
                 ${filterText}
             </div>
-            <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                ${chapterReadBadge}
                 ${statusBadge}
             </div>
         `;
@@ -7599,6 +7900,9 @@ function initTanakhPeshatView() {
             textContent.innerHTML = '<div style="text-align: center; padding: 2rem;">טוען את מאגר התנ"ך...</div>';
             return;
         }
+
+        updateMarkReadBtn();
+        renderChapterPills();
 
         textContent.style.fontSize = `${TpState.fontSize}px`;
         const verses = getVisibleVerses();
@@ -7655,7 +7959,7 @@ function initTanakhPeshatView() {
                     <div class="tp-notice-box" style="margin-top: 1rem;">
                         <div style="font-size: 1.6rem; margin-bottom: 0.5rem; color: var(--accent-gold);"><i class="fa-solid fa-circle-info"></i></div>
                         <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-primary);">ביאור פשט הטקסט</div>
-                        ביאור הפשט במילים פשוטות ומודרניות הושלם במלואו עבור <strong>חומש בראשית וחומש שמות</strong> (2,742 פסוקים).<br>
+                        ביאור הפשט במילים פשוטות ומודרניות הושלם במלואו עבור <strong>חומש בראשית וחומש שמות וכל ספרי הכתובים</strong>.<br>
                         הטקסט המקראי עבור <strong>ספר ${TpState.book}</strong> מוצג כסדרו מימין. ביאור פשט ייעודי לספר זה נמצא בהכנה.
                     </div>
                 `;
@@ -7806,6 +8110,66 @@ function initTanakhPeshatView() {
             });
 
             textContent.appendChild(rowsContainer);
+        }
+
+        // End of chapter completion card
+        if (TpState.chapter !== 'all' && !TpState.searchQuery) {
+            const isRead = isChapterRead(TpState.book, TpState.chapter);
+            const maxChap = getMaxChapter(TpState.book);
+            const hasNext = TpState.chapter < maxChap;
+            const cHeb = numberToHebrew(TpState.chapter);
+
+            const endBox = document.createElement('div');
+            endBox.className = 'tp-end-chapter-box';
+            endBox.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; font-size: 1.25rem; font-weight: bold; color: ${isRead ? '#27ae60' : 'var(--text-primary)'}; margin-bottom: 0.4rem; font-family: var(--font-serif);">
+                    <i class="${isRead ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-check'}" style="color: ${isRead ? '#27ae60' : 'var(--accent-gold)'}; font-size: 1.4rem;"></i>
+                    <span>סיום קריאת פרק ${cHeb} בספר ${TpState.book}</span>
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.2rem;">
+                    ${isRead ? 'כל הכבוד! פרק זה מסומן כעת כהושלם במעקב הקריאה האישי שלך.' : 'סיימת לקרוא את הפרק והביאור? סמן אותו כעת כדי לעקוב אחר ההתקדמות שלך בספר.'}
+                </div>
+                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; align-items: center;">
+                    <button type="button" class="tp-read-toggle-btn ${isRead ? 'read' : 'unread'}" id="tp-end-mark-btn">
+                        <i class="${isRead ? 'fa-solid' : 'fa-regular'} fa-circle-check"></i>
+                        <span>${isRead ? 'סומן כהושלם ✓ (לחץ לביטול)' : 'סמן כעת: קראתי את הפרק ✓'}</span>
+                    </button>
+                    ${hasNext ? `
+                        <button type="button" class="category-tab" id="tp-end-next-btn" style="background: var(--accent-gold); color: #1a1a2e; font-weight: bold; border-color: var(--accent-gold); padding: 0.45rem 1.15rem; display: inline-flex; align-items: center; gap: 0.45rem; border-radius: 20px;">
+                            <span>המשך לפרק ${numberToHebrew(TpState.chapter + 1)}</span>
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                    ` : `
+                        <span style="background: rgba(39, 174, 96, 0.15); color: #27ae60; border: 1px solid #27ae60; font-weight: bold; padding: 0.45rem 1rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 0.45rem;">
+                            <i class="fa-solid fa-trophy"></i> אשרייך! הגעת לסוף ספר ${TpState.book}!
+                        </span>
+                    `}
+                </div>
+            `;
+
+            const endMarkBtn = endBox.querySelector('#tp-end-mark-btn');
+            if (endMarkBtn) {
+                endMarkBtn.addEventListener('click', () => {
+                    toggleChapterReadStatus(TpState.book, TpState.chapter);
+                    updateChapterSelect();
+                    renderView();
+                });
+            }
+
+            const endNextBtn = endBox.querySelector('#tp-end-next-btn');
+            if (endNextBtn) {
+                endNextBtn.addEventListener('click', () => {
+                    if (TpState.chapter < maxChap) {
+                        TpState.chapter++;
+                        chapterSelect.value = TpState.chapter.toString();
+                        renderView();
+                        const topBar = document.getElementById('tanakh-peshat-view');
+                        if (topBar) topBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            }
+
+            textContent.appendChild(endBox);
         }
     }
 
